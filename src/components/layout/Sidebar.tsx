@@ -1,0 +1,233 @@
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  LayoutDashboard,
+  CheckSquare,
+  GraduationCap,
+  Heart,
+  Wallet,
+  Home,
+  Plane,
+  Dumbbell,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+  Shield,
+  Crown,
+  HelpCircle,
+  BookOpen,
+} from "lucide-react";
+import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+const navigation = [
+  { name: "Minha Semana", href: "/", icon: LayoutDashboard },
+  { name: "Hábitos", href: "/habitos", icon: CheckSquare },
+  { name: "Estudos", href: "/estudos", icon: GraduationCap },
+  { name: "Saúde", href: "/saude", icon: Heart },
+  { name: "Finanças", href: "/financas", icon: Wallet },
+  { name: "Casa & Compras", href: "/casa", icon: Home },
+  { name: "Viagens", href: "/viagens", icon: Plane },
+  { name: "Treinos", href: "/treinos", icon: Dumbbell },
+];
+
+const bottomNavigation = [
+  { name: "Suporte", href: "/suporte", icon: HelpCircle },
+  { name: "Tutorial", href: "/tutorial", icon: BookOpen },
+  { name: "Planos Premium", href: "/assinatura", icon: Crown },
+  { name: "Configurações", href: "/configuracoes", icon: Settings },
+];
+
+export function Sidebar() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+
+  useEffect(() => {
+    checkUser();
+
+    // Subscribe to profile changes
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+        },
+        (payload) => {
+          if (payload.new && (payload.new as any).id) {
+            checkUser();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const checkUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setUserEmail(user.email || "");
+      const { data } = await supabase.from('profiles').select('role, avatar_url').eq('id', user.id).single();
+      if (data?.role === 'admin') setIsAdmin(true);
+      if (data?.avatar_url) setAvatarUrl(data.avatar_url);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/login");
+  };
+
+  return (
+    <>
+      {/* Mobile toggle button */}
+      <button
+        onClick={() => setIsMobileOpen(true)}
+        className={cn(
+          "fixed top-4 left-4 z-50 p-2 rounded-lg bg-card shadow-card lg:hidden transition-opacity duration-200",
+          isMobileOpen ? "opacity-0 pointer-events-none" : "opacity-100"
+        )}
+      >
+        <Menu size={20} />
+      </button>
+
+      {/* Overlay */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-sidebar-border z-50 transition-transform duration-300 ease-in-out",
+          "lg:translate-x-0",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="p-6 border-b border-sidebar-border flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-3" onClick={() => setIsMobileOpen(false)}>
+              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+                <CheckSquare className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="font-semibold text-lg text-foreground">Ordem Essencial</h1>
+                <p className="text-xs text-muted-foreground">Organize sua vida</p>
+              </div>
+            </Link>
+            
+            <button
+              onClick={() => setIsMobileOpen(false)}
+              className="p-2 -mr-2 rounded-lg hover:bg-sidebar-accent text-sidebar-foreground lg:hidden"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+            {navigation.map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setIsMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <item.icon size={20} className={isActive ? "text-primary" : "text-muted-foreground"} />
+                  {item.name}
+                </Link>
+              );
+            })}
+
+            {isAdmin && (
+              <Link
+                to="/admin"
+                onClick={() => setIsMobileOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+                  location.pathname === "/admin" && "bg-sidebar-accent text-sidebar-accent-foreground"
+                )}
+              >
+                <Shield size={20} className="text-red-500" />
+                Painel Admin
+              </Link>
+            )}
+          </nav>
+
+          {/* Bottom Navigation */}
+          <div className="p-4 border-t border-sidebar-border space-y-1">
+            {bottomNavigation.map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setIsMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <item.icon size={20} className={isActive ? "text-primary" : "text-muted-foreground"} />
+                  {item.name}
+                </Link>
+              );
+            })}
+            
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all duration-200"
+            >
+              <LogOut size={20} />
+              Sair
+            </button>
+          </div>
+
+          {/* User profile */}
+          <div className="p-4 border-t border-sidebar-border">
+            <div className="flex items-center gap-3 px-2">
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={avatarUrl || undefined} alt={userEmail} />
+                <AvatarFallback className="bg-primary/20 text-primary">
+                  {userEmail.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate" title={userEmail}>
+                  {userEmail || "Usuário"}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {isAdmin ? "Administrador" : "Membro"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+}
