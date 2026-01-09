@@ -181,6 +181,11 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-3">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-muted">
+              <img src="/logo.svg" alt="Ordem Essencial" className="w-full h-full object-cover" />
+            </div>
+          </div>
           <CardTitle className="text-2xl font-bold">Ordem Essencial</CardTitle>
           <CardDescription>Gerencie sua vida em um só lugar</CardDescription>
         </CardHeader>

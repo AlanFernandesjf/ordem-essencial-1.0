@@ -1246,7 +1246,13 @@ const Treinos = () => {
              <div className="flex items-center gap-2">
                  <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-border bg-muted">
                     {formWorkoutImage ? (
-                        <img src={formWorkoutImage} className="w-full h-full object-cover" />
+                        <img 
+                          src={formWorkoutImage} 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => {
+                            e.currentTarget.src = "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=200&fit=crop";
+                          }}
+                        />
                     ) : (
                         <div className="flex items-center justify-center h-full"><ImageIcon size={20} className="text-muted-foreground"/></div>
                     )}

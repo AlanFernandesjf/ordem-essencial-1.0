@@ -641,6 +641,9 @@ const Viagens = () => {
               src={tripInfo.image}
               alt={tripInfo.destination}
               className="w-full h-48 object-cover"
+              onError={(e) => {
+                e.currentTarget.src = "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=250&fit=crop";
+              }}
             />
             <div className="p-4">
               <div className="flex items-center justify-between">

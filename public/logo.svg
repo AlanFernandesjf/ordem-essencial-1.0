@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Gradiente sutil para o centro -->
+    <linearGradient id="tealGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00E5FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00B8D4;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Grupo Principal Centralizado -->
+  <g transform="translate(256, 256)">
+    
+    <!-- 1. Topo Esquerdo: Azul (Fitness/Dumbbell) -->
+    <!-- Setor -->
+    <path d="M -15,-15 L -240,-15 A 225,225 0 0,1 -15,-240 Z" fill="#4285F4" />
+    <!-- Ícone: Haltere (Dumbbell) -->
+    <g transform="translate(-128, -128) scale(0.6)">
+      <path d="M-30,-40 h-20 v80 h20 z M30,-40 h20 v80 h-20 z M-30,-10 h60 v20 h-60 z" fill="white" />
+      <!-- Pesos arredondados -->
+      <rect x="-60" y="-45" width="20" height="90" rx="5" fill="white"/>
+      <rect x="40" y="-45" width="20" height="90" rx="5" fill="white"/>
+    </g>
+
+    <!-- 2. Topo Direito: Vermelho (Compras/Carrinho) -->
+    <!-- Setor -->
+    <path d="M 15,-15 L 15,-240 A 225,225 0 0,1 240,-15 Z" fill="#EA4335" />
+    <!-- Ícone: Carrinho de Compras -->
+    <g transform="translate(128, -128) scale(0.12)">
+      <path d="M100 200 H200 L300 600 H800 L900 300 H350 M320 600 L300 600 L200 200 H0 M350 750 A 50 50 0 1 0 450 750 A 50 50 0 1 0 350 750 M700 750 A 50 50 0 1 0 800 750 A 50 50 0 1 0 700 750" 
+            fill="none" stroke="white" stroke-width="70" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- 3. Fundo Esquerdo: Amarelo (Finanças/Dólar) -->
+    <!-- Setor -->
+    <path d="M -15,15 L -15,240 A 225,225 0 0,1 -240,15 Z" fill="#FBBC05" />
+    <!-- Ícone: Dólar e Setas -->
+    <g transform="translate(-128, 128) scale(0.15)">
+      <!-- Símbolo de Dólar Simplificado -->
+      <text x="0" y="100" font-family="Arial, sans-serif" font-weight="bold" font-size="600" fill="white" text-anchor="middle">$</text>
+      <!-- Seta curva (ciclo) -->
+      <path d="M-200 150 Q -300 250 -200 350 L -230 380 M-200 350 L -170 380" fill="none" stroke="white" stroke-width="40" stroke-linecap="round" />
+    </g>
+
+    <!-- 4. Fundo Direito: Verde/Teal (Viagem/Avião) -->
+    <!-- Setor -->
+    <path d="M 15,15 L 240,15 A 225,225 0 0,1 15,240 Z" fill="#009688" />
+    <!-- Ícone: Avião -->
+    <g transform="translate(128, 128) scale(0.12)">
+       <path d="M100 400 L300 300 L400 500 L500 450 L450 300 L600 250 L650 300 L700 280 L620 200 L100 400 Z" fill="white" />
+       <!-- Simplificação visual de avião -->
+       <path d="M-100 100 L200 0 L100 -200 L300 -150 L350 -50 L500 -100 L550 -50 L350 50 L-100 100 Z" transform="rotate(-45)" fill="white"/>
+    </g>
+  </g>
+
+  <!-- Ícone Central (Check) -->
+  <!-- Borda Branca -->
+  <rect x="176" y="176" width="160" height="160" rx="40" ry="40" fill="white" />
+  <!-- Fundo Teal -->
+  <rect x="186" y="186" width="140" height="140" rx="30" ry="30" fill="#00BFA5" />
+  <!-- Checkmark -->
+  <path d="M 216,256 L 246,286 L 306,216" fill="none" stroke="white" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+
+</svg>

@@ -452,6 +452,9 @@ const Habitos = () => {
               src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=200&fit=crop"
               alt="Motivational"
               className="w-full h-40 object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
             />
             <div className="p-4 text-center bg-gradient-to-b from-card to-muted/30">
               <p className="text-sm italic text-muted-foreground">"Cumpra o que você se prometeu"</p>

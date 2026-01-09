@@ -3,7 +3,7 @@ import { Sidebar } from "./Sidebar";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Menu, CheckSquare } from "lucide-react";
+import { AlertCircle, Menu } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface MainLayoutProps {
@@ -83,8 +83,8 @@ export function MainLayout({ children, title }: MainLayoutProps) {
                 <Menu size={28} />
               </button>
               <div className="flex items-center gap-2 px-2 py-1 rounded-xl bg-card border border-border shadow-card">
-                <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-                  <CheckSquare className="w-5 h-5 text-primary-foreground" />
+                <div className="w-9 h-9 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                  <img src="/logo.svg" alt="Ordem Essencial" className="w-full h-full object-cover" />
                 </div>
                 <span className="text-base font-semibold">Ordem Essencial</span>
               </div>

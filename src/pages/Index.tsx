@@ -82,7 +82,7 @@ const Index = () => {
       }
 
       // 1. Fetch habits
-      let { data: existingHabits } = await supabase
+      const { data: existingHabits } = await supabase
         .from('habits')
         .select('*')
         .eq('user_id', user.id)
@@ -339,7 +339,11 @@ const Index = () => {
                       <th key={habit.id} className="p-3 text-center text-xs font-semibold border-b border-border min-w-[80px]">
                         {habit.title}
                       </th>
-                    )) : defaultHabits.map((h, i) => <th key={i} className="p-3">{h}</th>)}
+                    )) : (
+                      <th className="p-3 text-center text-xs text-muted-foreground border-b border-border">
+                        Nenhum hábito cadastrado
+                      </th>
+                    )}
                     <th className="p-2 border-b border-border">
                       <button className="p-1 hover:bg-muted rounded">
                         <Plus size={14} />

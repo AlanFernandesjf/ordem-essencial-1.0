@@ -124,8 +124,8 @@ export function Sidebar() {
           {/* Logo */}
           <div className="p-6 border-b border-sidebar-border flex items-center justify-between">
             <Link to="/" className="flex items-center gap-3" onClick={() => setIsMobileOpen(false)}>
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                <CheckSquare className="w-5 h-5 text-primary-foreground" />
+              <div className="w-10 h-10 rounded-xl overflow-hidden bg-muted flex items-center justify-center">
+                <img src="/logo.svg" alt="Ordem Essencial" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h1 className="font-semibold text-lg text-foreground">Ordem Essencial</h1>
