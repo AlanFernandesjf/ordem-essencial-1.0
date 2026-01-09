@@ -59,6 +59,22 @@ serve(async (req) => {
             .eq('asaas_subscription_id', subscriptionId);
 
         if (error) console.error('Erro ao ativar assinatura:', error);
+        
+        // Atualizar também o profile para redundância e cache
+        if (currentSub && !error) {
+             // Precisamos do user_id, vamos buscar da subscription se não tivermos
+             const { data: subWithUser } = await supabase
+                .from('user_subscriptions')
+                .select('user_id')
+                .eq('asaas_subscription_id', subscriptionId)
+                .single();
+                
+             if (subWithUser?.user_id) {
+                 await supabase.from('profiles')
+                    .update({ subscription_status: 'pro' })
+                    .eq('id', subWithUser.user_id);
+             }
+        }
 
     } else if (event.event === 'PAYMENT_OVERDUE') {
         // Pagamento atrasado: Bloquear (status past_due)

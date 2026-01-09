@@ -61,7 +61,7 @@ export function Sidebar() {
     (window as any).openSidebar = openHandler;
     (window as any).closeSidebar = closeHandler;
 
-    // Subscribe to profile changes
+    // Subscribe to profile and subscription changes
     const channel = supabase
       .channel('schema-db-changes')
       .on(
@@ -75,6 +75,17 @@ export function Sidebar() {
           if (payload.new && (payload.new as any).id) {
             checkUser();
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_subscriptions',
+        },
+        (payload) => {
+           checkUser();
         }
       )
       .subscribe();
