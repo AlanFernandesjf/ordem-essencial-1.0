@@ -26,3 +26,5 @@ export function formatDateDisplay(dateString: string) {
   if (!year || !month || !day) return dateString;
   return `${day}/${month}/${year}`;
 }
+
+export const formatDate = formatDateDisplay;

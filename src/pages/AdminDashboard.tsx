@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Loader2, Calendar, CreditCard, Edit, Save, X, Plus, Trash2, DollarSign, Package, Video, MessageCircle } from "lucide-react";
+import { Search, Loader2, Calendar, CreditCard, Edit, Save, X, Plus, Trash2, DollarSign, Package, Video, MessageCircle, MessageSquareWarning } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/utils/dateUtils";
@@ -22,6 +22,15 @@ import {
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+
+interface CancellationFeedback {
+  id: string;
+  user_id: string;
+  reasons: string[];
+  other_reason: string | null;
+  created_at: string;
+  user_email?: string;
+}
 
 interface TutorialVideo {
   id: string;
@@ -126,6 +135,7 @@ export default function AdminDashboard() {
   // Estados para Tutoriais
   const [videos, setVideos] = useState<TutorialVideo[]>([]);
   const [faqs, setFaqs] = useState<TutorialFAQ[]>([]);
+  const [feedbacks, setFeedbacks] = useState<CancellationFeedback[]>([]);
   const [isCreateVideoOpen, setIsCreateVideoOpen] = useState(false);
   const [isCreateFaqOpen, setIsCreateFaqOpen] = useState(false);
   const [newVideoTitle, setNewVideoTitle] = useState("");
@@ -141,8 +151,30 @@ export default function AdminDashboard() {
 
   const fetchData = async () => {
     setLoading(true);
-    await Promise.all([fetchUsers(), fetchPlans(), fetchPayments(), fetchTutorials(), fetchFaqs()]);
+    await Promise.all([fetchUsers(), fetchPlans(), fetchPayments(), fetchTutorials(), fetchFaqs(), fetchFeedback()]);
     setLoading(false);
+  };
+
+  const fetchFeedback = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('cancellation_feedback')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) {
+            console.warn("Feedback table not found:", error.message);
+            toast({
+                variant: "destructive",
+                title: "Erro no Feedback",
+                description: "A tabela 'cancellation_feedback' não foi encontrada. Execute o SQL de migração."
+            });
+            return;
+        }
+        setFeedbacks(data || []);
+    } catch (error) {
+        console.error("Error fetching feedback:", error);
+    }
   };
 
   const fetchTutorials = async () => {
@@ -564,12 +596,13 @@ export default function AdminDashboard() {
         </div>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 lg:w-[500px]">
+          <TabsList className="grid w-full grid-cols-6 lg:w-[600px]">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="users">Usuários</TabsTrigger>
             <TabsTrigger value="plans">Planos</TabsTrigger>
             <TabsTrigger value="finance">Financeiro</TabsTrigger>
             <TabsTrigger value="tutorials">Tutoriais</TabsTrigger>
+            <TabsTrigger value="feedback">Feedback</TabsTrigger>
           </TabsList>
 
           <TabsContent value="tutorials" className="space-y-6">
@@ -975,6 +1008,85 @@ export default function AdminDashboard() {
              </Card>
           </TabsContent>
 
+          <TabsContent value="feedback" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquareWarning className="w-5 h-5" />
+                  Feedback de Cancelamento
+                </CardTitle>
+                <CardDescription>
+                  Motivos informados pelos usuários ao cancelar a assinatura.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead>Forma de Pagamento</TableHead>
+                      <TableHead>Motivos</TableHead>
+                      <TableHead>Outros</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {feedbacks.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          Nenhum feedback registrado.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      feedbacks.map((item) => {
+                        const user = users.find(u => u.id === item.user_id);
+                        
+                        // Extract payment method from reasons
+                        const paymentReason = item.reasons?.find(r => r.startsWith('PAYMENT:'));
+                        const displayReasons = item.reasons?.filter(r => !r.startsWith('PAYMENT:')) || [];
+                        
+                        let paymentMethod = 'Desconhecido';
+                        if (paymentReason) {
+                            const rawMethod = paymentReason.replace('PAYMENT:', '');
+                            if (rawMethod === 'CREDIT_CARD') paymentMethod = 'Cartão de Crédito';
+                            else if (rawMethod === 'PIX') paymentMethod = 'Pix';
+                            else if (rawMethod === 'BOLETO') paymentMethod = 'Boleto';
+                            else paymentMethod = rawMethod;
+                        }
+
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell>{formatDate(item.created_at)}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{user?.name || 'Usuário'}</span>
+                                <span className="text-xs text-muted-foreground">{user?.email || item.user_id}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                                <Badge variant="secondary" className="text-xs">
+                                    {paymentMethod}
+                                </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                  {displayReasons.map((r, i) => (
+                                      <Badge key={i} variant="outline" className="text-xs">{r}</Badge>
+                                  ))}
+                              </div>
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate" title={item.other_reason || ""}>
+                              {item.other_reason || "-"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
 
         {/* Edit User Dialog */}

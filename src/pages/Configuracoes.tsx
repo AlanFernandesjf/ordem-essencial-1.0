@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
-import { User, Bell, Shield, CreditCard, Loader2, Save, Camera } from "lucide-react";
+import { User, Bell, Shield, CreditCard, Loader2, Save, Camera, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -12,6 +12,8 @@ import { ThemeSettings } from "@/components/settings/ThemeSettings";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
@@ -63,6 +65,85 @@ const Configuracoes = () => {
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
 
+  const [cancelling, setCancelling] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+  
+  // Cancellation Survey State
+  const [showSurvey, setShowSurvey] = useState(false);
+  const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
+  const [otherReason, setOtherReason] = useState("");
+
+  const surveyOptions = [
+      "Custo-benefício não vale a pena",
+      "Não estou usando com frequência",
+      "Encontrei outra solução melhor",
+      "Problemas técnicos / Bugs",
+      "Muito caro",
+      "Difícil de usar",
+      "Falta de recursos que eu preciso",
+      "Outros"
+  ];
+
+  const toggleReason = (reason: string) => {
+      setSelectedReasons(prev => 
+          prev.includes(reason) 
+              ? prev.filter(r => r !== reason)
+              : [...prev, reason]
+      );
+  };
+
+  const handleSyncStatus = async () => {
+    setCheckingStatus(true);
+    try {
+        const { data, error } = await supabase.functions.invoke('sync-status');
+        if (error) throw error;
+        
+        if (data?.synced) {
+            toast({ title: "Status atualizado", description: "Sua assinatura foi ativada!" });
+            fetchData();
+        } else if (data?.status === 'active') {
+             // Already active
+             fetchData();
+        }
+    } catch (error) {
+        console.error("Erro ao sincronizar status:", error);
+    } finally {
+        setCheckingStatus(false);
+    }
+  };
+
+  const handleCancelSubscription = () => {
+    // Open Survey Modal instead of window.confirm
+    setShowSurvey(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    setCancelling(true);
+    try {
+      // Prepare feedback
+      const feedback = {
+          reasons: selectedReasons,
+          other: selectedReasons.includes("Outros") ? otherReason : null
+      };
+
+      const { data, error } = await supabase.functions.invoke('cancel-subscription', {
+          body: { feedback }
+      });
+
+      if (error) throw error;
+      if (data && !data.success) throw new Error(data.error || "Erro ao cancelar");
+
+      toast({ title: "Assinatura cancelada", description: "Sua assinatura foi cancelada com sucesso. Agradecemos seu feedback." });
+      setShowSurvey(false);
+      fetchData();
+    } catch (error: any) {
+      console.error("Erro ao cancelar assinatura:", error);
+      toast({ variant: "destructive", title: "Erro", description: error.message });
+    } finally {
+        setCancelling(false);
+    }
+  };
+
   // Fetch data
   useEffect(() => {
     fetchData();
@@ -88,7 +169,38 @@ const Configuracoes = () => {
     return () => clearTimeout(timer);
   }, [theme, profile?.id, loading]);
 
-  const fetchData = async () => {
+      // Realtime subscription listener
+      useEffect(() => {
+        if (!profile?.id) return;
+    
+        const channel = supabase
+          .channel('user_subscriptions_changes')
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'user_subscriptions',
+              filter: `user_id=eq.${profile.id}`
+            },
+            (payload) => {
+              console.log('Subscription changed:', payload);
+              fetchData(); // Refresh data on change
+            }
+          )
+          .subscribe();
+    
+        // Check status on mount if pending
+        if (subscription?.status === 'pending') {
+             handleSyncStatus();
+        }
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
+      }, [profile?.id, subscription?.status]); // Add subscription.status to dependency
+    
+      const fetchData = async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -569,27 +681,71 @@ const Configuracoes = () => {
 
         {/* Subscription */}
         <DashboardCard title="Plano" icon={<CreditCard size={18} />} className="lg:col-span-2">
-          <div className="flex items-center justify-between p-4 bg-primary/5 rounded-xl border border-primary/20">
-            <div>
-              <h3 className="font-semibold text-foreground">
-                {subscription?.status === 'active' || subscription?.status === 'trial' 
-                  ? (subscription.plan_type === 'yearly' ? 'Plano Anual' : 'Plano Mensal') 
-                  : 'Plano Gratuito'}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {subscription?.status === 'active' 
-                  ? 'Sua assinatura está ativa e você tem acesso total.' 
-                  : subscription?.status === 'trial'
-                  ? 'Você está no período de teste gratuito.'
-                  : 'Você está usando a versão gratuita com recursos básicos.'}
-              </p>
-            </div>
-            {subscription?.status === 'active' || subscription?.status === 'trial' ? (
-              <Button variant="outline" onClick={() => navigate('/assinatura')}>Gerenciar Assinatura</Button>
+            {subscription && (subscription.status === 'active' || subscription.status === 'trial') ? (
+              <div className="space-y-4">
+                <div className="p-4 border rounded-lg bg-muted/50">
+                   <div className="flex justify-between items-center mb-2">
+                       <span className="font-medium">Plano Atual</span>
+                       <span className="text-primary font-bold capitalize">{subscription.plan_type === 'yearly' ? 'Anual' : 'Mensal'}</span>
+                   </div>
+                   <div className="flex justify-between items-center text-sm text-muted-foreground">
+                       <span>Status</span>
+                       <span className="capitalize text-green-600 font-medium">Ativo</span>
+                   </div>
+                   <div className="flex justify-between items-center text-sm text-muted-foreground mt-1">
+                       <span>Renova em</span>
+                       <span>{new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}</span>
+                   </div>
+                </div>
+                
+                <Button variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={handleCancelSubscription} disabled={cancelling}>
+                  {cancelling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Cancelar Assinatura
+                </Button>
+              </div>
+            ) : subscription && subscription.status === 'canceled' ? (
+                <div className="space-y-4">
+                    <div className="p-4 border rounded-lg bg-muted/50">
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="font-medium">Plano</span>
+                            <span className="text-muted-foreground font-bold capitalize">{subscription.plan_type === 'yearly' ? 'Anual' : 'Mensal'}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm text-muted-foreground">
+                            <span>Status</span>
+                            <span className="capitalize text-red-600 font-medium">Cancelado</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm text-muted-foreground mt-1">
+                            <span>Acesso até</span>
+                            <span>{new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                    </div>
+                    <Button onClick={() => navigate('/assinatura')} className="w-full">Reativar Assinatura</Button>
+                </div>
+            ) : subscription && subscription.status === 'pending' ? (
+                <div className="space-y-4">
+                     <div className="p-4 border rounded-lg bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-900">
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="font-medium text-yellow-800 dark:text-yellow-200">Assinatura Pendente</span>
+                        </div>
+                        <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-4">
+                            Estamos aguardando a confirmação do seu pagamento para liberar o acesso.
+                        </p>
+                        <Button variant="outline" size="sm" onClick={handleSyncStatus} disabled={checkingStatus} className="w-full border-yellow-200 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
+                            {checkingStatus ? <Loader2 className="w-3 h-3 animate-spin mr-1"/> : null}
+                            Verificar Pagamento Agora
+                        </Button>
+                    </div>
+                    <Button onClick={() => navigate('/assinatura')} className="w-full" variant="outline">
+                        Ir para Pagamento
+                    </Button>
+                     <Button variant="ghost" className="w-full text-red-500 hover:text-red-700 hover:bg-red-50" onClick={handleCancelSubscription} disabled={cancelling}>
+                        {cancelling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Cancelar Solicitação
+                    </Button>
+                </div>
             ) : (
               <Button onClick={() => navigate('/assinatura')}>Upgrade para Premium</Button>
             )}
-          </div>
         </DashboardCard>
       </div>
       
@@ -599,6 +755,69 @@ const Configuracoes = () => {
         imageFile={selectedFile}
         onConfirm={handleCropConfirm}
       />
+
+      {/* Cancellation Survey Modal */}
+      <Dialog open={showSurvey} onOpenChange={setShowSurvey}>
+          <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                  <DialogTitle>Por que você está cancelando?</DialogTitle>
+                  <DialogDescription>
+                      Sua opinião é muito importante para melhorarmos nosso serviço.
+                  </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4 py-4">
+                  <div className="grid gap-4">
+                    {surveyOptions.map((option) => (
+                        <div key={option} className="flex items-start space-x-3 space-y-0">
+                            <Checkbox 
+                                id={`reason-${option}`} 
+                                checked={selectedReasons.includes(option)}
+                                onCheckedChange={() => toggleReason(option)}
+                                className="mt-0.5"
+                            />
+                            <Label 
+                                htmlFor={`reason-${option}`}
+                                className="text-sm font-normal leading-normal cursor-pointer"
+                            >
+                                {option}
+                            </Label>
+                        </div>
+                    ))}
+                  </div>
+                  
+                  {selectedReasons.includes("Outros") && (
+                      <div className="animate-in fade-in slide-in-from-top-2 pt-2">
+                          <Label htmlFor="other-reason" className="mb-2 block font-medium">Poderia nos contar mais?</Label>
+                          <Textarea 
+                              id="other-reason"
+                              placeholder="Digite seu motivo..." 
+                              value={otherReason} 
+                              onChange={(e) => setOtherReason(e.target.value)} 
+                              className="resize-none"
+                          />
+                      </div>
+                  )}
+
+                  <div className="bg-muted/50 p-3 rounded-md flex items-start gap-3 text-muted-foreground text-sm mt-4">
+                    <AlertTriangle className="w-5 h-5 shrink-0 text-amber-500" />
+                    <p>Ao cancelar, você perderá acesso aos recursos Premium ao fim do período atual.</p>
+                  </div>
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0">
+                  <Button variant="outline" onClick={() => setShowSurvey(false)}>Manter Assinatura</Button>
+                  <Button 
+                      variant="destructive" 
+                      onClick={handleConfirmCancel} 
+                      disabled={cancelling || selectedReasons.length === 0}
+                  >
+                      {cancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Confirmar Cancelamento
+                  </Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };

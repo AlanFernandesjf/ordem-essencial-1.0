@@ -6,22 +6,49 @@ interface PaymentResponse {
   subscriptionId?: string;
   message?: string;
   error?: string;
+  pixQrCode?: string;
+  pixCopyPaste?: string;
+  boletoBarcode?: string;
+  boletoUrl?: string;
 }
 
-export const createSubscription = async (planId: string, email: string) => {
+export const createSubscription = async (
+    planId: string, 
+    email: string,
+    billingType: 'CREDIT_CARD' | 'PIX' | 'BOLETO',
+    creditCard?: { 
+        holderName: string; 
+        number: string; 
+        expiryMonth: string; 
+        expiryYear: string; 
+        ccv: string; 
+    },
+    installments: number = 1
+) => {
   try {
-    const { data, error } = await supabase.functions.invoke('create-payment', {
-      body: { 
-        plan: planId,
-        email,
-        debug: false // Garante que não é modo debug
-      }
-    });
+    console.log(`Iniciando pagamento: Plano=${planId}, Método=${billingType}, Parcelas=${installments}`);
+        const { data, error } = await supabase.functions.invoke('create-payment', {
+            body: { 
+                plan: planId, 
+                email, 
+                billingType,
+                creditCard: creditCard?.number,
+                holderName: creditCard?.holderName,
+                expiryMonth: creditCard?.expiryMonth,
+                expiryYear: creditCard?.expiryYear,
+                ccv: creditCard?.ccv,
+                installments 
+            }
+        });
 
-    if (error) throw error;
+    if (error) {
+        console.error("Supabase Invoke Error Full:", error);
+        throw error;
+    }
     
     // Agora que a função retorna 200 mesmo em erro lógico, verificamos o body
     if (data && !data.success) {
+        console.error("Erro retornado pelo backend:", data);
         throw new Error(data.error || 'Erro desconhecido retornado pelo servidor.');
     }
 

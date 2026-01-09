@@ -29,13 +29,15 @@ export function MainLayout({ children, title }: MainLayoutProps) {
         return; 
     }
 
-    // Bloqueio por inadimplência ou fim do trial
-    if ((status === 'past_due' || status === 'canceled') && !isSubscriptionPage) {
+    // Bloqueio por inadimplência ou fim do trial (para cancelados, verifica se ainda tem dias restantes)
+    if ((status === 'past_due' || (status === 'canceled' && (daysRemaining === null || daysRemaining <= 0))) && !isSubscriptionPage) {
       navigate('/assinatura');
       toast({
         variant: "destructive",
         title: "Assinatura Suspensa",
-        description: "Renove sua assinatura para continuar acessando."
+        description: status === 'canceled' 
+          ? "Sua assinatura foi cancelada e o período vigente encerrou."
+          : "Renove sua assinatura para continuar acessando."
       });
       return;
     }

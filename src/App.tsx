@@ -19,6 +19,7 @@ import Subscription from "./pages/Subscription";
 import RedefinirSenha from "./pages/RedefinirSenha";
 import Suporte from "./pages/Suporte";
 import Tutorial from "./pages/Tutorial";
+import Apps from "./pages/Apps";
 import { AuthGuard } from "./components/layout/AuthGuard";
 import { AdminGuard } from "./components/layout/AdminGuard";
 
@@ -47,6 +48,7 @@ const App = () => (
           <Route path="/redefinir-senha" element={<AuthGuard><RedefinirSenha /></AuthGuard>} />
           <Route path="/suporte" element={<AuthGuard><Suporte /></AuthGuard>} />
           <Route path="/tutorial" element={<AuthGuard><Tutorial /></AuthGuard>} />
+          <Route path="/apps" element={<AuthGuard><Apps /></AuthGuard>} />
           
           {/* Rota Admin */}
           <Route path="/admin" element={<AdminGuard><AdminDashboard /></AdminGuard>} />

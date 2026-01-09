@@ -206,33 +206,50 @@ const Financas = () => {
         }));
       }
 
-      // 2. Fetch Months Data
-      const { data: monthsData, error: monthsError } = await supabase
-        .from('finance_months')
+      // 2. Fetch Transactions (Moved up to calculate Annual Balance)
+      const { data: transData, error: transError } = await supabase
+        .from('finance_transactions')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
 
-      if (monthsError) throw monthsError;
+      let fetchedTransactions: Transaction[] = [];
 
-      if (monthsData && monthsData.length > 0) {
-        setBalancoAnual(prev => prev.map(m => {
-          const found = monthsData.find(d => d.month_index === m.month_index);
-          if (found) {
-            return {
-              ...m,
-              id: found.id,
-              receitas: found.receitas,
-              custos_fixos: found.custos_fixos,
-              custos_variaveis: found.custos_variaveis,
-              dividas: found.dividas,
-              investimentos: found.investimentos || 0
-            };
-          }
-          return m;
-        }));
+      if (transError) {
+         console.error("Error fetching transactions", transError);
+      } else {
+        fetchedTransactions = transData as any[];
+        setTransactions(fetchedTransactions);
       }
 
-      // 3. Fetch Budget Data
+      // 3. Calculate Annual Balance from Transactions
+      // This ensures the table is automatically populated based on dates
+      const currentYear = new Date().getFullYear();
+      const calculatedMonths = generateEmptyMonths().map(m => {
+        const monthTrans = fetchedTransactions.filter(t => {
+            const d = parseISO(t.date);
+            return getMonth(d) + 1 === m.month_index && getYear(d) === currentYear;
+        });
+
+        const receitas = monthTrans.filter(t => t.type === 'receita').reduce((sum, t) => sum + t.amount, 0);
+        const custos_fixos = monthTrans.filter(t => t.type === 'custo_fixo').reduce((sum, t) => sum + t.amount, 0);
+        const custos_variaveis = monthTrans.filter(t => t.type === 'custo_variavel').reduce((sum, t) => sum + t.amount, 0);
+        const dividas = monthTrans.filter(t => t.type === 'divida').reduce((sum, t) => sum + t.amount, 0);
+        const investimentos = monthTrans.filter(t => t.type === 'investimento').reduce((sum, t) => sum + t.amount, 0);
+
+        return {
+            ...m,
+            receitas,
+            custos_fixos,
+            custos_variaveis,
+            dividas,
+            investimentos
+        };
+      });
+
+      setBalancoAnual(calculatedMonths);
+
+      // 4. Fetch Budget Data
       const { data: budgetData, error: budgetError } = await supabase
         .from('finance_budgets')
         .select('*')
@@ -252,21 +269,6 @@ const Financas = () => {
           }
           return b;
         }));
-      }
-
-      // 4. Fetch Transactions
-      const { data: transData, error: transError } = await supabase
-        .from('finance_transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('date', { ascending: false });
-
-      if (transError) {
-         // If table doesn't exist, this might fail. We should handle it gracefully or let it throw.
-         // Assuming migration is applied.
-         console.error("Error fetching transactions", transError);
-      } else {
-        setTransactions(transData as any[]);
       }
 
     } catch (error: any) {

@@ -50,6 +50,7 @@ export function Sidebar() {
   const [userEmail, setUserEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [subscriptionStatus, setSubscriptionStatus] = useState<string>("");
+  const [planType, setPlanType] = useState<string>("");
 
   useEffect(() => {
     checkUser();
@@ -107,7 +108,7 @@ export function Sidebar() {
       // Check subscription directly first
       const { data: sub } = await supabase
         .from('user_subscriptions')
-        .select('status')
+        .select('status, plan_type, current_period_end')
         .eq('user_id', user.id)
         .single();
 
@@ -116,11 +117,24 @@ export function Sidebar() {
       if (data?.role === 'admin') setIsAdmin(true);
       if (data?.avatar_url) setAvatarUrl(data.avatar_url);
       
+      // Check validity
+      const now = new Date();
+      const periodEnd = sub?.current_period_end ? new Date(sub.current_period_end) : null;
+      const isSubValid = sub?.status === 'active' || (sub?.status === 'canceled' && periodEnd && periodEnd > now);
+
       // Prioritize active subscription from user_subscriptions
-      if (sub?.status === 'active') {
+      if (isSubValid) {
         setSubscriptionStatus('pro');
+        setPlanType(sub.plan_type);
       } else if (data?.subscription_status) {
-        setSubscriptionStatus(data.subscription_status);
+        // Only fallback to profile if we don't have a contradictory subscription
+        // If we have a subscription and it is NOT valid (e.g. canceled and expired), 
+        // we should arguably consider them free, ignoring the stale profile 'pro'.
+        if (sub && !isSubValid) {
+             setSubscriptionStatus('free');
+        } else {
+             setSubscriptionStatus(data.subscription_status);
+        }
       }
     }
   };
@@ -253,7 +267,10 @@ export function Sidebar() {
                   {userEmail || "Usuário"}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {isAdmin ? "Administrador" : subscriptionStatus === 'trial' ? "Teste Grátis" : subscriptionStatus === 'pro' ? "Membro PRO" : "Membro Gratuito"}
+                  {isAdmin ? "Administrador" : 
+                   subscriptionStatus === 'trial' ? "Teste Grátis" : 
+                   subscriptionStatus === 'pro' ? (planType === 'yearly' ? "Plano Anual" : planType === 'monthly' ? "Plano Mensal" : "Membro PRO") : 
+                   "Membro Gratuito"}
                 </p>
               </div>
             </div>
