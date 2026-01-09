@@ -11,6 +11,10 @@ create table if not exists public.ai_plans (
 -- RLS
 alter table public.ai_plans enable row level security;
 
+-- Remove políticas existentes para evitar conflito ao rodar novamente
+drop policy if exists "Users can view their own plans" on public.ai_plans;
+drop policy if exists "Users can insert their own plans" on public.ai_plans;
+
 create policy "Users can view their own plans"
   on public.ai_plans for select
   using (auth.uid() = user_id);

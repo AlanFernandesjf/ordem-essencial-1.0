@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Loader2, Calendar, CreditCard, Edit, Save, X, Plus, Trash2, DollarSign, Package, Video, MessageCircle, MessageSquareWarning } from "lucide-react";
+import { Search, Loader2, Calendar, CreditCard, Edit, Save, X, Plus, Trash2, DollarSign, Package, Video, MessageCircle, MessageSquareWarning, Coins } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/utils/dateUtils";
@@ -77,6 +77,7 @@ interface UserProfile {
   created_at: string;
   subscription_status?: string;
   subscription_plan?: string;
+  credits?: number; // Added
   subscription?: {
     status: string;
     plan_type: string;
@@ -131,6 +132,11 @@ export default function AdminDashboard() {
   const [editStatus, setEditStatus] = useState("");
   const [editPlan, setEditPlan] = useState("");
   const [editLevel, setEditLevel] = useState(1);
+
+  // Estados para adicionar créditos
+  const [isAddCreditsOpen, setIsAddCreditsOpen] = useState(false);
+  const [creditsToAdd, setCreditsToAdd] = useState("");
+  const [selectedUserForCredits, setSelectedUserForCredits] = useState<{id: string, email: string} | null>(null);
 
   // Estados para Tutoriais
   const [videos, setVideos] = useState<TutorialVideo[]>([]);
@@ -230,6 +236,9 @@ export default function AdminDashboard() {
           console.warn("Erro ao buscar user_subscriptions:", subsError.message);
       }
 
+      // Busca créditos
+      const { data: creditsData } = await supabase.from('user_credits').select('*');
+
       const formattedUsers = profiles.map(profile => {
         // Encontra assinatura do usuário
         const userSubs = subscriptions?.filter((s: any) => s.user_id === profile.id) || [];
@@ -237,6 +246,9 @@ export default function AdminDashboard() {
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
         
+        // Encontra créditos
+        const userCredits = creditsData?.find((c: any) => c.user_id === profile.id);
+
         // Se não tiver na tabela subscriptions, tenta usar os campos do profile (legado/fallback)
         const activeSub = sortedSubs?.[0] || (profile.subscription_status ? {
             status: profile.subscription_status,
@@ -247,6 +259,7 @@ export default function AdminDashboard() {
 
         return {
           ...profile,
+          credits: userCredits?.credits_remaining || 0,
           subscription: activeSub
         };
       });
@@ -369,6 +382,46 @@ export default function AdminDashboard() {
       } catch (error: any) {
          toast({ variant: "destructive", title: "Erro ao deletar", description: "Pode ser necessário deletar via Auth no painel Supabase se houver restrições." });
       }
+  };
+
+  const openAddCreditsModal = (user: UserProfile) => {
+    setSelectedUserForCredits({ id: user.id, email: user.email });
+    setCreditsToAdd("10"); // Default value
+    setIsAddCreditsOpen(true);
+  };
+
+  const confirmAddCredits = async () => {
+    if (!selectedUserForCredits || !creditsToAdd) return;
+    const amount = parseInt(creditsToAdd);
+    if (isNaN(amount)) {
+        toast({ variant: "destructive", title: "Valor inválido" });
+        return;
+    }
+
+    try {
+        const userId = selectedUserForCredits.id;
+        // Check if row exists first
+        const { data: existing } = await supabase.from('user_credits').select('*').eq('user_id', userId).single();
+        
+        if (existing) {
+            const { error } = await supabase
+                .from('user_credits')
+                .update({ credits_remaining: existing.credits_remaining + amount })
+                .eq('user_id', userId);
+            if (error) throw error;
+        } else {
+             const { error } = await supabase
+                .from('user_credits')
+                .insert({ user_id: userId, credits_remaining: 20 + amount }); // 20 default + amount
+             if (error) throw error;
+        }
+
+        toast({ title: "Créditos adicionados!" });
+        setIsAddCreditsOpen(false);
+        fetchUsers();
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Erro", description: error.message });
+    }
   };
 
   // ... (manter funções existentes: handleEditClick, handleSaveUser, handleCreateUser, getStatusBadge, formatCurrency)
@@ -850,10 +903,22 @@ export default function AdminDashboard() {
                                       </span>
                                   ) : '-'}
                               </TableCell>
+                              <TableCell>
+                                <span className="font-medium text-amber-600">{user.credits || 0}</span>
+                              </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-amber-500 hover:text-amber-700 hover:bg-amber-100"
+                                        title="Adicionar Créditos"
+                                        onClick={() => openAddCreditsModal(user)}
+                                    >
+                                        <Coins className="w-4 h-4" />
+                                    </Button>
                                     <Button 
-                                    variant="ghost" 
+                                    variant="ghost"  
                                     size="icon"
                                     title="Editar"
                                     onClick={() => handleEditClick(user)}
@@ -1227,6 +1292,37 @@ export default function AdminDashboard() {
               <Button onClick={handleCreateUser} disabled={creating}>
                 {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
                 Criar Usuário
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Plan Dialog */}
+        <Dialog open={isAddCreditsOpen} onOpenChange={setIsAddCreditsOpen}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Adicionar Créditos</DialogTitle>
+              <DialogDescription>
+                Adicione créditos para {selectedUserForCredits?.email}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="credits-amount">Quantidade de Créditos</Label>
+                <Input
+                  id="credits-amount"
+                  type="number"
+                  value={creditsToAdd}
+                  onChange={(e) => setCreditsToAdd(e.target.value)}
+                  placeholder="Ex: 10"
+                  min="1"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddCreditsOpen(false)}>Cancelar</Button>
+              <Button onClick={confirmAddCredits} className="bg-amber-500 hover:bg-amber-600">
+                Confirmar
               </Button>
             </DialogFooter>
           </DialogContent>

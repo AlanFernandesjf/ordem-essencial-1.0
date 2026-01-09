@@ -17,6 +17,7 @@ import {
   HelpCircle,
   BookOpen,
   Smartphone,
+  Coins,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ const bottomNavigation = [
   { name: "Suporte", href: "/suporte", icon: HelpCircle },
   { name: "Tutorial", href: "/tutorial", icon: BookOpen },
   { name: "Aplicativos", href: "/apps", icon: Smartphone },
+  { name: "Comprar Créditos", href: "/comprar-creditos", icon: Coins },
   { name: "Planos Premium", href: "/assinatura", icon: Crown },
   { name: "Configurações", href: "/configuracoes", icon: Settings },
 ];

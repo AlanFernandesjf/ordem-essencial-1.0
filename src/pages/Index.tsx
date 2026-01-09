@@ -49,6 +49,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState("Usuário");
   const [userStatus, setUserStatus] = useState<"trial" | "pro" | null>(null);
+  const [credits, setCredits] = useState<number | null>(null);
   const [time, setTime] = useState(new Date());
   
   const weekDates = getWeekDates();
@@ -63,7 +64,20 @@ const Index = () => {
   useEffect(() => {
     initializeData();
     const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
+
+    const handleCreditsUpdate = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        if (customEvent.detail !== undefined) {
+            setCredits(customEvent.detail);
+        }
+    };
+
+    window.addEventListener('credits-updated', handleCreditsUpdate);
+
+    return () => {
+        clearInterval(timer);
+        window.removeEventListener('credits-updated', handleCreditsUpdate);
+    };
   }, []);
 
   const initializeData = async () => {
@@ -174,6 +188,29 @@ const Index = () => {
       }
 
       setUrgenciasList(combinedUrgencies);
+
+      // 5. Fetch Credits
+      const { data: creditsData } = await supabase
+        .from('user_credits')
+        .select('credits_remaining')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (creditsData) {
+        setCredits(creditsData.credits_remaining);
+      } else {
+        // Lazy initialization if no record exists
+        const { error: insertError } = await supabase
+            .from('user_credits')
+            .insert({ user_id: user.id, credits_remaining: 20 });
+            
+        if (!insertError) {
+            setCredits(20);
+        } else {
+            console.warn("Could not initialize credits (likely missing RLS policy or network error):", insertError);
+            setCredits(0); // Fallback to 0 so the badge appears
+        }
+      }
 
     } catch (error) {
       console.error("Error initializing data:", error);
@@ -296,6 +333,13 @@ const Index = () => {
                </span>
              )}
           </div>
+          
+          {credits !== null && (
+            <Link to="/comprar-creditos" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200 shadow-sm animate-fade-in hover:bg-amber-200 transition-colors">
+                 <span className="text-base">🪙</span>
+                 <span>{credits} créditos</span>
+            </Link>
+          )}
         </div>
 
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
@@ -308,13 +352,15 @@ const Index = () => {
             </div>
 
             {/* Clock */}
-            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/40 dark:bg-black/20 border border-white/20 dark:border-white/10 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-300 group">
-                <div className="p-1.5 rounded-lg bg-primary/10 text-primary group-hover:scale-110 transition-transform duration-300">
-                  <Clock className="w-5 h-5" />
+            <div className="flex flex-col items-end gap-2">
+                <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/40 dark:bg-black/20 border border-white/20 dark:border-white/10 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-300 group">
+                    <div className="p-1.5 rounded-lg bg-primary/10 text-primary group-hover:scale-110 transition-transform duration-300">
+                    <Clock className="w-5 h-5" />
+                    </div>
+                    <span className="text-3xl font-bold tracking-tight text-foreground font-mono tabular-nums">
+                    {time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                 </div>
-                <span className="text-3xl font-bold tracking-tight text-foreground font-mono tabular-nums">
-                  {time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                </span>
             </div>
         </div>
       </div>

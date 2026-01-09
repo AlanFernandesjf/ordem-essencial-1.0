@@ -20,6 +20,7 @@ import RedefinirSenha from "./pages/RedefinirSenha";
 import Suporte from "./pages/Suporte";
 import Tutorial from "./pages/Tutorial";
 import Apps from "./pages/Apps";
+import BuyCredits from "./pages/BuyCredits";
 import { AuthGuard } from "./components/layout/AuthGuard";
 import { AdminGuard } from "./components/layout/AdminGuard";
 
@@ -49,6 +50,7 @@ const App = () => (
           <Route path="/suporte" element={<AuthGuard><Suporte /></AuthGuard>} />
           <Route path="/tutorial" element={<AuthGuard><Tutorial /></AuthGuard>} />
           <Route path="/apps" element={<AuthGuard><Apps /></AuthGuard>} />
+          <Route path="/comprar-creditos" element={<AuthGuard><BuyCredits /></AuthGuard>} />
           
           {/* Rota Admin */}
           <Route path="/admin" element={<AdminGuard><AdminDashboard /></AdminGuard>} />

@@ -5,10 +5,10 @@ import { Dumbbell, Calendar, Info } from "lucide-react";
 interface WorkoutPlan {
   split: string;
   frequency: string;
-  workouts: {
+  workouts?: {
     name: string;
     description: string;
-    exercises: {
+    exercises?: {
       name: string;
       sets: number;
       reps: string;
@@ -44,7 +44,7 @@ export const WorkoutView = ({ plan }: { plan: WorkoutPlan }) => {
       </div>
 
       <div className="space-y-6">
-        {plan.workouts.map((workout, index) => (
+        {plan.workouts?.map((workout, index) => (
           <Card key={index} className="overflow-hidden border-l-4 border-l-primary">
             <CardHeader className="bg-muted/30 pb-3">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
@@ -54,7 +54,7 @@ export const WorkoutView = ({ plan }: { plan: WorkoutPlan }) => {
             </CardHeader>
             <CardContent className="pt-4">
               <div className="space-y-1 divide-y divide-border/50">
-                {workout.exercises.map((exercise, exIndex) => (
+                {workout.exercises?.map((exercise, exIndex) => (
                   <div key={exIndex} className="py-3 flex flex-col md:flex-row md:items-center justify-between gap-2 hover:bg-muted/20 px-2 rounded-lg transition-colors">
                     <div className="flex-1">
                       <h4 className="font-medium">{exercise.name}</h4>

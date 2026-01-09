@@ -161,6 +161,13 @@ const Treinos = () => {
     bodyFat: bodyFat
   };
 
+  const aiInitialData = {
+    weight: normMeasurements.weight || undefined,
+    height: normMeasurements.height ? (normMeasurements.height < 3 ? Math.round(normMeasurements.height * 100) : Math.round(normMeasurements.height)) : undefined,
+    age: measurements.find(m => m.name.toLowerCase().includes('idade')) ? getNumericValue(measurements.find(m => m.name.toLowerCase().includes('idade'))?.value) || undefined : undefined,
+    gender: gender
+  };
+
   useEffect(() => {
     initializeData();
   }, []);
@@ -863,12 +870,132 @@ const Treinos = () => {
 
 
 
-  const tabs: { key: TabType; label: string }[] = [
+  const handleApplyDietPlan = async (plan: any, options: { replace: boolean, targetDays?: string[] } = { replace: false, targetDays: ['DIÁRIO'] }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      if (options.replace) {
+          const { error: delError } = await supabase
+              .from('fitness_diet')
+              .delete()
+              .eq('user_id', user.id);
+          
+          if (delError) throw delError;
+          setDiet([]);
+      }
+
+      const mealsToInsert: any[] = [];
+      const days = options.targetDays && options.targetDays.length > 0 ? options.targetDays : ['DIÁRIO'];
+
+      days.forEach(day => {
+          if (!plan.meals) return;
+          plan.meals.forEach((meal: any) => {
+              const description = meal.options?.map((opt: any, i: number) => 
+                  `${i+1}. ${opt.name} (${opt.ingredients?.join(', ') || ''})`
+              ).join('\n\n') || "";
+
+              mealsToInsert.push({
+                  user_id: user.id,
+                  meal: `${day}:::${meal.name}`,
+                  description: description,
+                  calories: plan.calories_target ? `${Math.round(plan.calories_target / plan.meals.length)}` : "",
+                  created_at: new Date().toISOString()
+              });
+          });
+      });
+
+      if (mealsToInsert.length === 0) return;
+
+      const { data, error } = await supabase
+          .from('fitness_diet')
+          .insert(mealsToInsert)
+          .select();
+
+      if (error) throw error;
+
+      if (data) {
+          const newItems = data.map((d: any) => ({
+              id: d.id,
+              meal: d.meal,
+              description: d.description,
+              calories: d.calories
+          }));
+          setDiet(prev => [...prev, ...newItems]);
+      }
+  };
+
+  const handleApplyWorkoutPlan = async (plan: any, options: { replace: boolean } = { replace: false }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      if (options.replace) {
+           const { error: delError } = await supabase
+              .from('fitness_workouts')
+              .delete()
+              .eq('user_id', user.id);
+
+           if (delError) throw delError;
+           setWorkouts([]);
+      }
+
+      // 1. Create Workouts (Days)
+      for (const workout of plan.workouts) {
+          // Insert Workout Day
+          const { data: wData, error: wError } = await supabase
+              .from('fitness_workouts')
+              .insert({
+                  user_id: user.id,
+                  day: workout.name, // e.g. "Treino A"
+                  focus: workout.description || workout.name,
+                  image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=200&fit=crop"
+              })
+              .select()
+              .single();
+
+          if (wError) throw wError;
+
+          // 2. Insert Exercises for this Workout
+          const exercisesToInsert = workout.exercises.map((ex: any) => ({
+              user_id: user.id,
+              workout_id: wData.id,
+              name: ex.name,
+              reps: `${ex.sets}x ${ex.reps}`,
+              done: false
+          }));
+
+          const { data: exData, error: exError } = await supabase
+              .from('fitness_exercises')
+              .insert(exercisesToInsert)
+              .select();
+
+          if (exError) throw exError;
+
+          // Update local state
+          const newExercises = exData.map((e: any) => ({
+              id: e.id,
+              name: e.name,
+              reps: e.reps,
+              done: e.done,
+              workoutId: wData.id
+          }));
+
+          setWorkouts(prev => [...prev, {
+              id: wData.id,
+              day: wData.day,
+              focus: wData.focus,
+              image: wData.image,
+              exercises: newExercises
+          }]);
+      }
+  };
+
+  const tabs: { key: TabType; label: string; icon?: any }[] = [
     { key: "medidas", label: "MEDIDAS" },
     { key: "treinos", label: "PLANILHA DE TREINOS" },
     { key: "dieta", label: "DIETA" },
     { key: "saude", label: "SAÚDE" },
     { key: "beleza", label: "BELEZA" },
+    { key: "ai_coach", label: "IA COACH", icon: Sparkles },
   ];
 
   if (loading) {
@@ -963,7 +1090,11 @@ const Treinos = () => {
           </div>
           
           <div className="max-w-4xl mx-auto">
-             <AIPlanGenerator type={aiTab} />
+             <AIPlanGenerator 
+                type={aiTab} 
+                initialData={aiInitialData}
+                onApplyPlan={aiTab === 'diet' ? handleApplyDietPlan : handleApplyWorkoutPlan}
+             />
           </div>
         </div>
       )}

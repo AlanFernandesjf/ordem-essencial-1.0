@@ -1,24 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Utensils, Droplets, Flame } from "lucide-react";
+import { Flame, Utensils, Droplets, Clock, Sparkles } from "lucide-react";
 
 interface DietPlan {
   calories_target: number;
-  macros_target: {
+  macros_target?: {
     protein: string;
     carbs: string;
     fats: string;
   };
   hydration_target: string;
-  meals: {
+  meals?: {
     name: string;
     time: string;
-    options: {
+    options?: {
       name: string;
-      ingredients: string[];
+      ingredients?: string[];
       preparation?: string;
     }[];
   }[];
+  tips?: string[];
 }
 
 export const DietView = ({ plan }: { plan: DietPlan }) => {
@@ -33,63 +33,92 @@ export const DietView = ({ plan }: { plan: DietPlan }) => {
           </CardContent>
         </Card>
         
-        <Card className="bg-blue-500/5 border-blue-500/20">
+        <Card className="bg-primary/5 border-primary/20">
           <CardContent className="pt-6 flex flex-col items-center justify-center text-center">
-            <Droplets className="h-8 w-8 text-blue-500 mb-2" />
-            <h3 className="font-bold text-xl">{plan.hydration_target}</h3>
-            <p className="text-sm text-muted-foreground">Meta de Água</p>
+            <Utensils className="h-8 w-8 text-primary mb-2" />
+            <div className="flex gap-4 text-sm font-medium">
+              <div className="flex flex-col">
+                <span className="text-lg">{plan.macros_target?.protein || '-'}</span>
+                <span className="text-muted-foreground text-xs">Prot</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg">{plan.macros_target?.carbs || '-'}</span>
+                <span className="text-muted-foreground text-xs">Carb</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg">{plan.macros_target?.fats || '-'}</span>
+                <span className="text-muted-foreground text-xs">Gord</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-green-500/5 border-green-500/20">
+        <Card className="bg-primary/5 border-primary/20">
           <CardContent className="pt-6 flex flex-col items-center justify-center text-center">
-            <Utensils className="h-8 w-8 text-green-500 mb-2" />
-            <div className="flex gap-2 text-sm font-medium">
-              <span>P: {plan.macros_target.protein}</span>
-              <span>C: {plan.macros_target.carbs}</span>
-              <span>G: {plan.macros_target.fats}</span>
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">Macros (Prot/Carb/Gord)</p>
+            <Droplets className="h-8 w-8 text-primary mb-2" />
+            <h3 className="font-bold text-2xl">{plan.hydration_target || 'N/A'}</h3>
+            <p className="text-sm text-muted-foreground">Meta de Água</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Refeições do Dia</h3>
-        {plan.meals.map((meal, index) => (
-          <Card key={index} className="overflow-hidden">
-            <CardHeader className="bg-muted/30 py-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-medium flex items-center gap-2">
+        {plan.meals?.map((meal, index) => (
+          <Card key={index} className="overflow-hidden border-l-4 border-l-primary">
+            <CardHeader className="bg-muted/30 pb-3">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Clock size={16} className="text-muted-foreground" />
                   {meal.name}
-                  <Badge variant="outline" className="font-normal">
-                    {meal.time}
-                  </Badge>
                 </CardTitle>
+                <span className="text-sm font-medium bg-background px-3 py-1 rounded-full border">
+                  {meal.time}
+                </span>
               </div>
             </CardHeader>
-            <CardContent className="pt-4">
-              <div className="space-y-4">
-                {meal.options.map((option, optIndex) => (
-                  <div key={optIndex} className="bg-muted/20 p-3 rounded-lg">
-                    <h4 className="font-semibold text-primary mb-2">{option.name}</h4>
-                    <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                      {option.ingredients.map((ing, i) => (
-                        <li key={i}>{ing}</li>
-                      ))}
-                    </ul>
-                    {option.preparation && (
-                      <p className="text-xs text-muted-foreground mt-2 italic">
-                        Preparo: {option.preparation}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
+            <CardContent className="pt-4 space-y-4">
+              {meal.options?.map((option, optIndex) => (
+                <div key={optIndex} className="bg-background p-4 rounded-lg border shadow-sm">
+                  <h4 className="font-semibold text-primary mb-2 flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs">
+                      {optIndex + 1}
+                    </span>
+                    {option.name}
+                  </h4>
+                  <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
+                    {option.ingredients?.map((ing, i) => (
+                      <li key={i}>{ing}</li>
+                    ))}
+                  </ul>
+                  {option.preparation && (
+                     <p className="mt-3 text-xs text-muted-foreground italic bg-muted/30 p-2 rounded">
+                       👨‍🍳 {option.preparation}
+                     </p>
+                  )}
+                </div>
+              ))}
             </CardContent>
           </Card>
         ))}
       </div>
+      
+      {plan.tips && plan.tips.length > 0 && (
+        <Card className="bg-yellow-500/10 border-yellow-500/20">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
+              <Sparkles size={18} />
+              Dicas do Nutricionista
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc list-inside space-y-2 text-sm">
+              {plan.tips.map((tip, i) => (
+                <li key={i}>{tip}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
