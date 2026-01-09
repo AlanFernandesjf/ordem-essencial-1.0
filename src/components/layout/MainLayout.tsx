@@ -95,7 +95,9 @@ export function MainLayout({ children, title }: MainLayoutProps) {
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Atenção</AlertTitle>
                     <AlertDescription>
-                        Sua assinatura vence em {daysRemaining} dias. Evite o bloqueio renovando agora.
+                        {status === 'trial' 
+                            ? "Seu período de teste gratuito está terminando! Faça o pagamento agora para não perder o acesso." 
+                            : `Sua assinatura vence em ${daysRemaining} dias. Evite o bloqueio renovando agora.`}
                     </AlertDescription>
                 </Alert>
             )}
