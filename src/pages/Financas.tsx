@@ -1020,33 +1020,7 @@ const Financas = () => {
             type="date" 
             value={formTransDate} 
             onChange={e => setFormTransDate(e.target.value)} 
-            className="h-8"
-          />
-        </div>
 
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">Tipo</label>
-          <Select value={formTransType} onValueChange={setFormTransType}>
-            <SelectTrigger className="h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="receita">Receita</SelectItem>
-              <SelectItem value="custo_fixo">Custo Fixo</SelectItem>
-              <SelectItem value="custo_variavel">Custo Variável</SelectItem>
-              <SelectItem value="divida">Dívida</SelectItem>
-              <SelectItem value="investimento">Investimento</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <FormField label="Categoria (Opcional)" value={formTransCategory} onChange={setFormTransCategory} placeholder="Ex: Alimentação" />
-      </CrudModal>
-    </MainLayout>
-  );
-};
-
-export default Financas;
             className="h-8"
           />
         </div>

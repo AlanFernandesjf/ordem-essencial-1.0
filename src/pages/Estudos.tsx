@@ -891,7 +891,7 @@ const Estudos = () => {
                       </div>
                     </div>
                   );
-                })))}
+                }))}
             </div>
           </div>
 
