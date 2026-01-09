@@ -26,18 +26,7 @@ interface Urgencia {
   done: boolean;
 }
 
-const initialScheduleData: ScheduleRow[] = [
-  { time: "6:00", schedule: ["Acordar", "Acordar", "Acordar", "Acordar", "Acordar", "—", "—"] },
-  { time: "7:00", schedule: ["Café e devocional", "Café e devocional", "Café e devocional", "Café e devocional", "Café e devocional", "Café e devocional", "—"] },
-  { time: "8:00", schedule: ["Treino", "Cardio", "Treino", "Cardio", "Treino", "Aula de Bike", "—"] },
-  { time: "10:00", schedule: ["Trabalhar", "Trabalhar", "Trabalhar", "Trabalhar", "Trabalhar", "Planejamento semanal", "—"] },
-];
 
-const initialUrgencias: Urgencia[] = [
-  { id: 1, text: "Comprar tecido pro vestido", done: false },
-  { id: 2, text: "Ir na costureira", done: false },
-  { id: 3, text: "Resolver o problema do meu chip de celular", done: false },
-];
 
 const Habitos = () => {
   const { toast } = useToast();
@@ -46,8 +35,26 @@ const Habitos = () => {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completedLogs, setCompletedLogs] = useState<Set<string>>(new Set()); // Format: "habitId-date"
   
-  const [scheduleData, setScheduleData] = useState(initialScheduleData);
-  const [urgenciasList, setUrgenciasList] = useState(initialUrgencias);
+  const [scheduleData, setScheduleData] = useState<ScheduleRow[]>([
+    { time: "6:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "7:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "8:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "9:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "10:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "11:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "12:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "13:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "14:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "15:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "16:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "17:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "18:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "19:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "20:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "21:00", schedule: ["", "", "", "", "", "", ""] },
+    { time: "22:00", schedule: ["", "", "", "", "", "", ""] },
+  ]);
+  const [urgenciasList, setUrgenciasList] = useState<Urgencia[]>([]);
   
   // Modal states
   const [habitModal, setHabitModal] = useState(false);

@@ -51,6 +51,13 @@ export function Sidebar() {
   useEffect(() => {
     checkUser();
 
+    const openHandler = () => setIsMobileOpen(true);
+    const closeHandler = () => setIsMobileOpen(false);
+    window.addEventListener("open-sidebar", openHandler);
+    window.addEventListener("close-sidebar", closeHandler);
+    (window as any).openSidebar = openHandler;
+    (window as any).closeSidebar = closeHandler;
+
     // Subscribe to profile changes
     const channel = supabase
       .channel('schema-db-changes')
@@ -71,6 +78,10 @@ export function Sidebar() {
 
     return () => {
       supabase.removeChannel(channel);
+      window.removeEventListener("open-sidebar", openHandler);
+      window.removeEventListener("close-sidebar", closeHandler);
+      delete (window as any).openSidebar;
+      delete (window as any).closeSidebar;
     };
   }, []);
 
@@ -91,16 +102,7 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile toggle button */}
-      <button
-        onClick={() => setIsMobileOpen(true)}
-        className={cn(
-          "fixed top-4 left-4 z-50 p-2 rounded-lg bg-card shadow-card lg:hidden transition-opacity duration-200",
-          isMobileOpen ? "opacity-0 pointer-events-none" : "opacity-100"
-        )}
-      >
-        <Menu size={20} />
-      </button>
+      
 
       {/* Overlay */}
       {isMobileOpen && (

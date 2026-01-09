@@ -3,7 +3,7 @@ import { Sidebar } from "./Sidebar";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Menu, CheckSquare } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface MainLayoutProps {
@@ -69,6 +69,26 @@ export function MainLayout({ children, title }: MainLayoutProps) {
       <Sidebar />
       <main className="lg:pl-64">
         <div className="p-4 lg:p-8 pt-16 lg:pt-8">
+            <div className="lg:hidden mb-4 flex items-center gap-3">
+              <button
+                type="button"
+                aria-label="Abrir menu"
+                onClick={() => {
+                  const fn = (window as any).openSidebar;
+                  if (typeof fn === "function") fn();
+                  else window.dispatchEvent(new Event("open-sidebar"));
+                }}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border shadow-card text-foreground"
+              >
+                <Menu size={28} />
+              </button>
+              <div className="flex items-center gap-2 px-2 py-1 rounded-xl bg-card border border-border shadow-card">
+                <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
+                  <CheckSquare className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <span className="text-base font-semibold">Ordem Essencial</span>
+              </div>
+            </div>
             {/* Alerta Visual Fixo se estiver perto de vencer */}
             {daysRemaining !== null && daysRemaining <= 5 && daysRemaining > 0 && status !== 'past_due' && location.pathname !== '/assinatura' && (
                 <Alert variant="destructive" className="mb-6">

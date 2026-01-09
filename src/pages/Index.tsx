@@ -11,7 +11,6 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const weekDays = ["SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO", "DOMINGO"];
-const defaultHabits = ["Acordar 6am", "Devocional", "Exercício Físico", "Ler 10 páginas", "Tomar 2L de água"];
 
 interface Habit {
   id: string;
@@ -88,21 +87,6 @@ const Index = () => {
         .select('*')
         .eq('user_id', user.id)
         .order('created_at');
-
-      // Create default habits if none exist
-      if (!existingHabits || existingHabits.length === 0) {
-        const habitsToInsert = defaultHabits.map(title => ({
-          user_id: user.id,
-          title
-        }));
-        
-        const { data: newHabits, error } = await supabase
-          .from('habits')
-          .insert(habitsToInsert)
-          .select();
-          
-        if (newHabits) existingHabits = newHabits;
-      }
 
       setHabits(existingHabits || []);
 

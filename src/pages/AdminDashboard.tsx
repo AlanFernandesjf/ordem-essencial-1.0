@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Loader2, Calendar, CreditCard, Edit, Save, X, Plus, Trash2, DollarSign, Package } from "lucide-react";
+import { Search, Loader2, Calendar, CreditCard, Edit, Save, X, Plus, Trash2, DollarSign, Package, Video, MessageCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/utils/dateUtils";
@@ -21,8 +21,22 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 import { Textarea } from "@/components/ui/textarea";
+
+interface TutorialVideo {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  created_at: string;
+}
+
+interface TutorialFAQ {
+  id: string;
+  question: string;
+  answer: string;
+  created_at: string;
+}
 
 interface Plan {
   id: string;
@@ -109,14 +123,60 @@ export default function AdminDashboard() {
   const [editPlan, setEditPlan] = useState("");
   const [editLevel, setEditLevel] = useState(1);
 
+  // Estados para Tutoriais
+  const [videos, setVideos] = useState<TutorialVideo[]>([]);
+  const [faqs, setFaqs] = useState<TutorialFAQ[]>([]);
+  const [isCreateVideoOpen, setIsCreateVideoOpen] = useState(false);
+  const [isCreateFaqOpen, setIsCreateFaqOpen] = useState(false);
+  const [newVideoTitle, setNewVideoTitle] = useState("");
+  const [newVideoDesc, setNewVideoDesc] = useState("");
+  const [newVideoUrl, setNewVideoUrl] = useState("");
+  const [newFaqQuestion, setNewFaqQuestion] = useState("");
+  const [newFaqAnswer, setNewFaqAnswer] = useState("");
+  const [isCreatingTutorial, setIsCreatingTutorial] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
     setLoading(true);
-    await Promise.all([fetchUsers(), fetchPlans(), fetchPayments()]);
+    await Promise.all([fetchUsers(), fetchPlans(), fetchPayments(), fetchTutorials(), fetchFaqs()]);
     setLoading(false);
+  };
+
+  const fetchTutorials = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tutorial_videos')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.warn("Tabela tutorial_videos pode não existir:", error.message);
+        return;
+      }
+      setVideos(data || []);
+    } catch (error) {
+      console.error("Erro ao buscar vídeos:", error);
+    }
+  };
+
+  const fetchFaqs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tutorial_faqs')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.warn("Tabela tutorial_faqs pode não existir:", error.message);
+        return;
+      }
+      setFaqs(data || []);
+    } catch (error) {
+      console.error("Erro ao buscar FAQs:", error);
+    }
   };
 
   const fetchUsers = async () => {
@@ -282,6 +342,77 @@ export default function AdminDashboard() {
   // ... (manter funções existentes: handleEditClick, handleSaveUser, handleCreateUser, getStatusBadge, formatCurrency)
 
 
+  const handleCreateVideo = async () => {
+    if (!newVideoTitle || !newVideoUrl) {
+        toast({ variant: "destructive", title: "Preencha título e URL" });
+        return;
+    }
+    setIsCreatingTutorial(true);
+    try {
+        const { error } = await supabase.from('tutorial_videos').insert({
+            title: newVideoTitle,
+            description: newVideoDesc,
+            url: newVideoUrl
+        });
+        if (error) throw error;
+        toast({ title: "Vídeo adicionado!" });
+        setIsCreateVideoOpen(false);
+        setNewVideoTitle(""); setNewVideoDesc(""); setNewVideoUrl("");
+        fetchTutorials();
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Erro", description: error.message });
+    } finally {
+        setIsCreatingTutorial(false);
+    }
+  };
+
+  const handleDeleteVideo = async (id: string) => {
+    if (!confirm("Excluir este vídeo?")) return;
+    try {
+        const { error } = await supabase.from('tutorial_videos').delete().eq('id', id);
+        if (error) throw error;
+        toast({ title: "Vídeo excluído" });
+        fetchTutorials();
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Erro", description: error.message });
+    }
+  };
+
+  const handleCreateFaq = async () => {
+    if (!newFaqQuestion || !newFaqAnswer) {
+        toast({ variant: "destructive", title: "Preencha pergunta e resposta" });
+        return;
+    }
+    setIsCreatingTutorial(true);
+    try {
+        const { error } = await supabase.from('tutorial_faqs').insert({
+            question: newFaqQuestion,
+            answer: newFaqAnswer
+        });
+        if (error) throw error;
+        toast({ title: "FAQ adicionada!" });
+        setIsCreateFaqOpen(false);
+        setNewFaqQuestion(""); setNewFaqAnswer("");
+        fetchFaqs();
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Erro", description: error.message });
+    } finally {
+        setIsCreatingTutorial(false);
+    }
+  };
+
+  const handleDeleteFaq = async (id: string) => {
+    if (!confirm("Excluir esta pergunta?")) return;
+    try {
+        const { error } = await supabase.from('tutorial_faqs').delete().eq('id', id);
+        if (error) throw error;
+        toast({ title: "FAQ excluída" });
+        fetchFaqs();
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Erro", description: error.message });
+    }
+  };
+
   const handleEditClick = (user: UserProfile) => {
     setEditingUser(user);
     setEditRole(user.role || 'user');
@@ -433,12 +564,128 @@ export default function AdminDashboard() {
         </div>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[400px]">
+          <TabsList className="grid w-full grid-cols-5 lg:w-[500px]">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="users">Usuários</TabsTrigger>
             <TabsTrigger value="plans">Planos</TabsTrigger>
             <TabsTrigger value="finance">Financeiro</TabsTrigger>
+            <TabsTrigger value="tutorials">Tutoriais</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="tutorials" className="space-y-6">
+            <div className="flex flex-col gap-6">
+              {/* Seção de Vídeos */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <Video className="w-5 h-5" />
+                    Vídeos Tutoriais
+                  </h2>
+                  <Button onClick={() => setIsCreateVideoOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Vídeo
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {videos.map((video) => (
+                    <Card key={video.id} className="relative overflow-hidden">
+                      <div className="absolute top-2 right-2 z-10">
+                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteVideo(video.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <CardHeader>
+                        <CardTitle className="text-lg">{video.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="aspect-video bg-muted rounded-md mb-2 overflow-hidden">
+                           {video.url.includes('youtube') || video.url.includes('vimeo') ? (
+                               <iframe 
+                                 src={video.url.replace('watch?v=', 'embed/')} 
+                                 className="w-full h-full" 
+                                 title={video.title} 
+                                 allowFullScreen 
+                               />
+                           ) : (
+                               <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                                   Preview Indisponível
+                               </div>
+                           )}
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{video.description}</p>
+                        <a href={video.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary mt-2 block hover:underline">
+                            {video.url}
+                        </a>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {videos.length === 0 && (
+                    <div className="col-span-3 text-center py-12 border rounded-lg border-dashed text-muted-foreground">
+                      Nenhum vídeo cadastrado.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t my-4" />
+
+              {/* Seção de FAQs */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5" />
+                    Perguntas Frequentes
+                  </h2>
+                  <Button onClick={() => setIsCreateFaqOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Pergunta
+                  </Button>
+                </div>
+
+                <Card>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Pergunta</TableHead>
+                          <TableHead>Resposta</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {faqs.map((faq) => (
+                          <TableRow key={faq.id}>
+                            <TableCell className="font-medium">{faq.question}</TableCell>
+                            <TableCell className="max-w-md truncate" title={faq.answer}>
+                              {faq.answer}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-100"
+                                onClick={() => handleDeleteFaq(faq.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {faqs.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                              Nenhuma pergunta cadastrada.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
 
           <TabsContent value="overview" className="space-y-4">
              {/* Stats Cards */}
@@ -959,6 +1206,89 @@ export default function AdminDashboard() {
                     </Button>
                 </DialogFooter>
             </DialogContent>
+        </Dialog>
+
+        {/* Create Video Dialog */}
+        <Dialog open={isCreateVideoOpen} onOpenChange={setIsCreateVideoOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Adicionar Vídeo Tutorial</DialogTitle>
+              <DialogDescription>
+                Adicione um novo vídeo do YouTube ou Vimeo.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="video-title">Título</Label>
+                <Input
+                  id="video-title"
+                  value={newVideoTitle}
+                  onChange={(e) => setNewVideoTitle(e.target.value)}
+                  placeholder="Ex: Como organizar finanças"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="video-url">URL do Vídeo</Label>
+                <Input
+                  id="video-url"
+                  value={newVideoUrl}
+                  onChange={(e) => setNewVideoUrl(e.target.value)}
+                  placeholder="Ex: https://www.youtube.com/watch?v=..."
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="video-desc">Descrição</Label>
+                <Textarea
+                  id="video-desc"
+                  value={newVideoDesc}
+                  onChange={(e) => setNewVideoDesc(e.target.value)}
+                  placeholder="Breve descrição do conteúdo..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCreateVideoOpen(false)}>Cancelar</Button>
+              <Button onClick={handleCreateVideo} disabled={isCreatingTutorial}>
+                {isCreatingTutorial ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Adicionar Vídeo"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create FAQ Dialog */}
+        <Dialog open={isCreateFaqOpen} onOpenChange={setIsCreateFaqOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Adicionar Pergunta Frequente</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="faq-question">Pergunta</Label>
+                <Input
+                  id="faq-question"
+                  value={newFaqQuestion}
+                  onChange={(e) => setNewFaqQuestion(e.target.value)}
+                  placeholder="Ex: Como cancelo minha assinatura?"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="faq-answer">Resposta</Label>
+                <Textarea
+                  id="faq-answer"
+                  value={newFaqAnswer}
+                  onChange={(e) => setNewFaqAnswer(e.target.value)}
+                  placeholder="Digite a resposta aqui..."
+                  rows={5}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCreateFaqOpen(false)}>Cancelar</Button>
+              <Button onClick={handleCreateFaq} disabled={isCreatingTutorial}>
+                {isCreatingTutorial ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Adicionar Pergunta"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
         </Dialog>
       </div>
     </MainLayout>

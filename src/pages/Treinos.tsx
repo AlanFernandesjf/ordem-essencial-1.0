@@ -47,83 +47,6 @@ interface CareItem {
   category: "saude" | "beleza";
 }
 
-const initialWorkoutsSeed = [
-  {
-    day: "SEGUNDA",
-    focus: "Quadríceps e Posterior",
-    image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=200&fit=crop",
-    exercises: [
-      { name: "Leg Press", reps: "4 · 10 · 200kg", done: false },
-      { name: "Extensora", reps: "2 · 15 · 60Kg", done: false },
-      { name: "Passada", reps: "4 · 10 · 10kg", done: false },
-      { name: "Flexora", reps: "4 · 10 · 30kg", done: false },
-      { name: "Abdutora", reps: "4 · 10 · 6 placas", done: false },
-    ],
-  },
-  {
-    day: "TERÇA",
-    focus: "Costas e Bíceps",
-    image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=200&fit=crop",
-    exercises: [
-      { name: "Puxada Frontal", reps: "4 · 10 · 30Kg", done: false },
-      { name: "Remada Baixa", reps: "4 · 12 · 35 kg", done: false },
-      { name: "Remada com Halter", reps: "4 · 12 · 10 Kg", done: false },
-      { name: "Rosca Direta", reps: "3 · 12 · 5 kg", done: false },
-      { name: "Rosca Concentrada", reps: "3 · 12 · 5 kg", done: false },
-    ],
-  },
-  {
-    day: "QUARTA",
-    focus: "Ombros e Tríceps",
-    image: "https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?w=400&h=200&fit=crop",
-    exercises: [
-      { name: "Desenvolvimento", reps: "4 · 10 · 20kg", done: false },
-      { name: "Elevação Lateral", reps: "4 · 12 · 6kg", done: false },
-      { name: "Elevação Frontal", reps: "4 · 12 · 6kg", done: false },
-      { name: "Tríceps Corda", reps: "4 · 12 · 20kg", done: false },
-      { name: "Tríceps Francês", reps: "3 · 12 · 10kg", done: false },
-    ],
-  },
-  {
-    day: "QUINTA",
-    focus: "Glúteos",
-    image: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=200&fit=crop",
-    exercises: [
-      { name: "Hip Thrust", reps: "4 · 12 · 60kg", done: false },
-      { name: "Cadeira Abdutora", reps: "4 · 15 · 50kg", done: false },
-      { name: "Stiff", reps: "4 · 10 · 30kg", done: false },
-      { name: "Elevação Pélvica", reps: "4 · 15", done: false },
-      { name: "Agachamento Sumo", reps: "4 · 12 · 20kg", done: false },
-    ],
-  },
-];
-
-const initialMeasurementsSeed = [
-  { name: "Peso", value: "65 kg", date: "01/01/2024" },
-  { name: "Altura", value: "165 cm", date: "01/01/2024" },
-  { name: "Cintura", value: "70 cm", date: "01/01/2024" },
-  { name: "Quadril", value: "95 cm", date: "01/01/2024" },
-  { name: "Braço", value: "28 cm", date: "01/01/2024" },
-];
-
-const initialDietSeed = [
-  { meal: "Café da manhã", description: "Ovos, pão integral, frutas", calories: "400 kcal" },
-  { meal: "Lanche manhã", description: "Iogurte com granola", calories: "200 kcal" },
-  { meal: "Almoço", description: "Frango, arroz, legumes", calories: "600 kcal" },
-  { meal: "Lanche tarde", description: "Frutas e castanhas", calories: "250 kcal" },
-  { meal: "Jantar", description: "Peixe grelhado, salada", calories: "450 kcal" },
-];
-
-const initialCareSeed = [
-  { name: "Exame de sangue", frequency: "Anual", lastDone: "Jun/2024", category: "saude" },
-  { name: "Dentista", frequency: "Semestral", lastDone: "Dez/2024", category: "saude" },
-  { name: "Oftalmologista", frequency: "Anual", lastDone: "Mar/2024", category: "saude" },
-  { name: "Skincare manhã", frequency: "Diário", lastDone: "Hoje", category: "beleza" },
-  { name: "Skincare noite", frequency: "Diário", lastDone: "Hoje", category: "beleza" },
-  { name: "Cabelo - hidratação", frequency: "Semanal", lastDone: "Dom", category: "beleza" },
-  { name: "Unhas", frequency: "Quinzenal", lastDone: "15/12", category: "beleza" },
-];
-
 type TabType = "medidas" | "treinos" | "dieta" | "saude" | "beleza";
 
 const DIET_DAYS = ["SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO", "DOMINGO", "DIÁRIO"];
@@ -256,10 +179,8 @@ const Treinos = () => {
       if (workoutsError) throw workoutsError;
 
       // 2. Check if seeding needed (based on workouts)
-      if (!workoutsData || workoutsData.length === 0) {
-        await seedData(user.id);
-        return;
-      }
+      // Seeding removed
+
 
       // 3. Fetch Exercises
       const { data: exercisesData, error: exercisesError } = await supabase
@@ -369,85 +290,7 @@ const Treinos = () => {
     }
   };
 
-  const seedData = async (userId: string) => {
-    try {
-      // Seed Workouts
-      for (const w of initialWorkoutsSeed) {
-        const { data: workoutData, error: wError } = await supabase
-          .from('fitness_workouts')
-          .insert({
-            user_id: userId,
-            day: w.day,
-            focus: w.focus,
-            image: w.image
-          })
-          .select()
-          .single();
 
-        if (wError) throw wError;
-
-        // Seed Exercises for this workout
-        const { error: exError } = await supabase
-          .from('fitness_exercises')
-          .insert(w.exercises.map(e => ({
-            user_id: userId,
-            workout_id: workoutData.id,
-            name: e.name,
-            reps: e.reps,
-            done: e.done
-          })));
-
-        if (exError) throw exError;
-      }
-
-      // Seed Measurements
-      const { error: measError } = await supabase
-        .from('fitness_measurements')
-        .insert(initialMeasurementsSeed.map(m => ({
-          user_id: userId,
-          name: m.name,
-          value: m.value,
-          date: m.date
-        })));
-      
-      if (measError) throw measError;
-
-      // Seed Diet
-      const { error: dietError } = await supabase
-        .from('fitness_diet')
-        .insert(initialDietSeed.map(d => ({
-          user_id: userId,
-          meal: d.meal,
-          description: d.description,
-          calories: d.calories
-        })));
-
-      if (dietError) throw dietError;
-
-      // Seed Care
-      const { error: careError } = await supabase
-        .from('fitness_care')
-        .insert(initialCareSeed.map(c => ({
-          user_id: userId,
-          name: c.name,
-          frequency: c.frequency,
-          last_done: c.lastDone,
-          category: c.category
-        })));
-
-      if (careError) throw careError;
-
-      initializeData();
-
-    } catch (error: any) {
-      console.error("Erro ao criar dados iniciais:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar dados iniciais",
-        description: error.message
-      });
-    }
-  };
 
   const toggleExercise = async (workoutId: string, exerciseId: string) => {
     // Optimistic update

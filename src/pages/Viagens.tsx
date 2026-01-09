@@ -28,31 +28,6 @@ interface PlaceItem {
   name: string;
 }
 
-const initialTripInfoSeed = {
-  destination: "Nova York",
-  image: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&h=250&fit=crop",
-  departureDate: "22/12/2025",
-  returnDate: "05/01/2026",
-  nights: "14 noites",
-};
-
-const initialExpensesSeed = [
-  { description: "Ida", estimatedValue: 5000, realValue: 4700, category: "flights" },
-  { description: "Volta", estimatedValue: 0, realValue: 0, category: "flights" },
-  { description: "Empire State", estimatedValue: 600, realValue: 800, category: "tours" },
-  { description: "Hotel Manhattan", estimatedValue: 8500, realValue: 0, category: "hotels" },
-  { description: "Café da manhã", estimatedValue: 50, realValue: 0, category: "food" },
-  { description: "Almoço", estimatedValue: 100, realValue: 0, category: "food" },
-  { description: "Jantar", estimatedValue: 150, realValue: 0, category: "food" },
-];
-
-const initialPlacesSeed = [
-  { name: "Times Square" },
-  { name: "Central Park" },
-  { name: "Estátua da Liberdade" },
-  { name: "Brooklyn Bridge" },
-];
-
 const Viagens = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -117,57 +92,57 @@ const Viagens = () => {
       }
 
       if (!tripData) {
-        await seedData(user.id);
-        return;
-      }
+        setTripInfo(null);
+        // No seeding
+      } else {
+        setTripInfo({
+          id: tripData.id,
+          destination: tripData.destination,
+          image: tripData.image || "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&h=250&fit=crop",
+          departureDate: tripData.departure_date,
+          returnDate: tripData.return_date,
+          nights: tripData.nights
+        });
 
-      setTripInfo({
-        id: tripData.id,
-        destination: tripData.destination,
-        image: tripData.image || initialTripInfoSeed.image,
-        departureDate: tripData.departure_date,
-        returnDate: tripData.return_date,
-        nights: tripData.nights
-      });
+        // 2. Fetch Expenses
+        const { data: expensesData, error: expensesError } = await supabase
+          .from('travel_expenses')
+          .select('*')
+          .eq('trip_id', tripData.id)
+          .order('created_at');
 
-      // 2. Fetch Expenses
-      const { data: expensesData, error: expensesError } = await supabase
-        .from('travel_expenses')
-        .select('*')
-        .eq('trip_id', tripData.id)
-        .order('created_at');
+        if (expensesError) throw expensesError;
 
-      if (expensesError) throw expensesError;
+        if (expensesData) {
+          const mappedExpenses: ExpenseItem[] = expensesData.map((e: any) => ({
+            id: e.id,
+            description: e.description,
+            estimatedValue: Number(e.estimated_value),
+            realValue: Number(e.real_value),
+            category: e.category as "flights" | "tours" | "hotels" | "food"
+          }));
 
-      if (expensesData) {
-        const mappedExpenses: ExpenseItem[] = expensesData.map((e: any) => ({
-          id: e.id,
-          description: e.description,
-          estimatedValue: Number(e.estimated_value),
-          realValue: Number(e.real_value),
-          category: e.category as "flights" | "tours" | "hotels" | "food"
-        }));
+          setFlights(mappedExpenses.filter(e => e.category === 'flights'));
+          setTours(mappedExpenses.filter(e => e.category === 'tours'));
+          setHotels(mappedExpenses.filter(e => e.category === 'hotels'));
+          setFood(mappedExpenses.filter(e => e.category === 'food'));
+        }
 
-        setFlights(mappedExpenses.filter(e => e.category === 'flights'));
-        setTours(mappedExpenses.filter(e => e.category === 'tours'));
-        setHotels(mappedExpenses.filter(e => e.category === 'hotels'));
-        setFood(mappedExpenses.filter(e => e.category === 'food'));
-      }
+        // 3. Fetch Places
+        const { data: placesData, error: placesError } = await supabase
+          .from('travel_places')
+          .select('*')
+          .eq('trip_id', tripData.id)
+          .order('created_at');
 
-      // 3. Fetch Places
-      const { data: placesData, error: placesError } = await supabase
-        .from('travel_places')
-        .select('*')
-        .eq('trip_id', tripData.id)
-        .order('created_at');
+        if (placesError) throw placesError;
 
-      if (placesError) throw placesError;
-
-      if (placesData) {
-        setPlaces(placesData.map((p: any) => ({
-          id: p.id,
-          name: p.name
-        })));
+        if (placesData) {
+          setPlaces(placesData.map((p: any) => ({
+            id: p.id,
+            name: p.name
+          })));
+        }
       }
 
     } catch (error: any) {
@@ -182,62 +157,6 @@ const Viagens = () => {
     }
   };
 
-  const seedData = async (userId: string) => {
-    try {
-      // Create Trip
-      const { data: trip, error: tripError } = await supabase
-        .from('travel_trips')
-        .insert({
-          user_id: userId,
-          destination: initialTripInfoSeed.destination,
-          image: initialTripInfoSeed.image,
-          departure_date: initialTripInfoSeed.departureDate,
-          return_date: initialTripInfoSeed.returnDate,
-          nights: initialTripInfoSeed.nights
-        })
-        .select()
-        .single();
-
-      if (tripError) throw tripError;
-
-      // Create Expenses
-      const { error: expError } = await supabase
-        .from('travel_expenses')
-        .insert(initialExpensesSeed.map(e => ({
-          user_id: userId,
-          trip_id: trip.id,
-          description: e.description,
-          estimated_value: e.estimatedValue,
-          real_value: e.realValue,
-          category: e.category
-        })));
-        
-      if (expError) throw expError;
-
-      // Create Places
-      const { error: placeError } = await supabase
-        .from('travel_places')
-        .insert(initialPlacesSeed.map(p => ({
-          user_id: userId,
-          trip_id: trip.id,
-          name: p.name
-        })));
-
-      if (placeError) throw placeError;
-
-      // Refresh
-      initializeData();
-
-    } catch (error: any) {
-      console.error("Erro ao criar dados iniciais:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar dados iniciais",
-        description: error.message
-      });
-    }
-  };
-
   const getExpenseList = (type: "flights" | "tours" | "hotels" | "food") => {
     switch (type) {
       case "flights": return flights;
@@ -249,12 +168,19 @@ const Viagens = () => {
 
   // Trip CRUD
   const openTripModal = () => {
-    if (!tripInfo) return;
-    setFormDestination(tripInfo.destination);
-    setFormDeparture(tripInfo.departureDate);
-    setFormReturn(tripInfo.returnDate);
-    setFormNights(tripInfo.nights);
-    setTempImage(tripInfo.image);
+    if (tripInfo) {
+      setFormDestination(tripInfo.destination);
+      setFormDeparture(tripInfo.departureDate);
+      setFormReturn(tripInfo.returnDate);
+      setFormNights(tripInfo.nights);
+      setTempImage(tripInfo.image);
+    } else {
+      setFormDestination("");
+      setFormDeparture("");
+      setFormReturn("");
+      setFormNights("");
+      setTempImage("");
+    }
     setTripModal(true);
   };
 
@@ -289,33 +215,56 @@ const Viagens = () => {
   };
 
   const saveTrip = async () => {
-    if (!tripInfo) return;
-    
     try {
-      const { error } = await supabase
-        .from('travel_trips')
-        .update({
-          destination: formDestination,
-          image: tempImage,
-          departure_date: formDeparture,
-          return_date: formReturn,
-          nights: formNights
-        })
-        .eq('id', tripInfo.id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-      if (error) throw error;
-
-      setTripInfo({
-        ...tripInfo,
+      const tripData = {
+        user_id: user.id,
         destination: formDestination,
-        image: tempImage,
-        departureDate: formDeparture,
-        returnDate: formReturn,
-        nights: formNights,
-      });
+        image: tempImage || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=250&fit=crop",
+        departure_date: formDeparture,
+        return_date: formReturn,
+        nights: formNights
+      };
+
+      if (tripInfo) {
+        const { error } = await supabase
+          .from('travel_trips')
+          .update(tripData)
+          .eq('id', tripInfo.id);
+
+        if (error) throw error;
+
+        setTripInfo({
+          ...tripInfo,
+          destination: formDestination,
+          image: tempImage || tripInfo.image,
+          departureDate: formDeparture,
+          returnDate: formReturn,
+          nights: formNights,
+        });
+      } else {
+        const { data, error } = await supabase
+          .from('travel_trips')
+          .insert(tripData)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setTripInfo({
+          id: data.id,
+          destination: data.destination,
+          image: data.image,
+          departureDate: data.departure_date,
+          returnDate: data.return_date,
+          nights: data.nights
+        });
+      }
 
       toast({
-        title: "Viagem atualizada!",
+        title: "Viagem salva!",
         description: "As informações foram salvas com sucesso."
       });
       setTripModal(false);
@@ -662,14 +611,27 @@ const Viagens = () => {
     );
   }
 
-  if (!tripInfo) return null;
-
   return (
     <MainLayout>
       <div className="mb-6 animate-slide-up">
         <h1 className="text-2xl font-bold text-foreground">Viagens ✅</h1>
       </div>
 
+      {!tripInfo ? (
+        <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4 animate-fade-in py-12">
+          <div className="p-4 bg-primary/10 rounded-full">
+            <Plane className="w-12 h-12 text-primary" />
+          </div>
+          <h2 className="text-xl font-semibold text-foreground">Nenhuma viagem planejada</h2>
+          <p className="text-muted-foreground text-center max-w-md">
+            Comece a planejar sua próxima aventura! Defina o destino, datas e orçamento.
+          </p>
+          <Button onClick={() => openTripModal()}>
+            <Plus className="w-4 h-4 mr-2" />
+            Criar Nova Viagem
+          </Button>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left Column - Destination */}
         <div className="space-y-6">
@@ -817,6 +779,7 @@ const Viagens = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Trip Modal */}
       <CrudModal

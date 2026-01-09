@@ -41,80 +41,6 @@ interface ChoreItem {
   done: boolean;
 }
 
-// Initial data for seeding only
-const initialCategoriesSeed = [
-  {
-    name: "HortiFrutti",
-    color: "hsl(140 50% 50%)",
-    colorBg: "hsl(140 50% 94%)",
-    items: [
-      { name: "Cebola roxa", checked: false },
-      { name: "Berinjela", checked: false },
-      { name: "Alho", checked: false },
-      { name: "Maçã", checked: true },
-      { name: "Banana", checked: true },
-      { name: "Limão", checked: true },
-    ],
-  },
-  {
-    name: "Açougue e Peixaria",
-    color: "hsl(25 90% 55%)",
-    colorBg: "hsl(25 90% 94%)",
-    items: [
-      { name: "Carne moída", checked: false },
-      { name: "Peito de frango", checked: true },
-      { name: "Salmão", checked: true },
-    ],
-  },
-  {
-    name: "Laticínios e Frios",
-    color: "hsl(45 100% 60%)",
-    colorBg: "hsl(45 100% 94%)",
-    items: [
-      { name: "Leite desnatado", checked: false },
-      { name: "Iogurte Grego", checked: false },
-      { name: "Queijo", checked: false },
-    ],
-  },
-  {
-    name: "Mercearia",
-    color: "hsl(270 60% 60%)",
-    colorBg: "hsl(270 60% 94%)",
-    items: [
-      { name: "Azeite de oliva", checked: false },
-      { name: "Macarrão", checked: false },
-      { name: "Café", checked: false },
-    ],
-  },
-  {
-    name: "Padaria",
-    color: "hsl(35 90% 60%)",
-    colorBg: "hsl(35 90% 94%)",
-    items: [
-      { name: "Pão francês", checked: true },
-      { name: "Pão de forma", checked: false },
-    ],
-  },
-  {
-    name: "Limpeza",
-    color: "hsl(180 50% 50%)",
-    colorBg: "hsl(180 50% 94%)",
-    items: [
-      { name: "Esponja", checked: false },
-      { name: "Detergente", checked: false },
-    ],
-  },
-];
-
-const initialCleaningTasksSeed = [
-  { task: "Aspirar a casa", frequency: "Semanal", lastDone: "Dom", room: "Geral" },
-  { task: "Limpar banheiros", frequency: "Semanal", lastDone: "Sáb", room: "Banheiro" },
-  { task: "Trocar roupa de cama", frequency: "Semanal", lastDone: "Dom", room: "Quarto" },
-  { task: "Limpar geladeira", frequency: "Quinzenal", lastDone: "15/12", room: "Cozinha" },
-  { task: "Lavar louça", frequency: "Diário", lastDone: "Hoje", room: "Cozinha" },
-  { task: "Passar roupa", frequency: "Semanal", lastDone: "Seg", room: "Lavanderia" },
-];
-
 type TabType = "mercado" | "limpeza" | "afazeres";
 
 const Casa = () => {
@@ -180,10 +106,8 @@ const Casa = () => {
       if (itemsError) throw itemsError;
 
       // Seed if empty
-      if ((!catsData || catsData.length === 0) && (!itemsData || itemsData.length === 0)) {
-        await seedData(user.id);
-        return; // seedData calls initializeData again
-      }
+      // Seeding removed
+
 
       // Merge items into categories
       const mappedCategories: ShoppingCategory[] = (catsData || []).map((cat: any) => ({
@@ -212,36 +136,7 @@ const Casa = () => {
 
       if (cleanError) throw cleanError;
 
-      if (!cleanData || cleanData.length === 0) {
-        // Seed cleaning tasks
-        const { error: seedCleanError } = await supabase
-          .from('home_cleaning_tasks')
-          .insert(initialCleaningTasksSeed.map(task => ({
-            user_id: user.id,
-            task: task.task,
-            frequency: task.frequency,
-            last_done: task.lastDone,
-            room: task.room
-          })));
-        
-        if (!seedCleanError) {
-           // Refetch
-           const { data: refetchedClean } = await supabase
-             .from('home_cleaning_tasks')
-             .select('*')
-             .eq('user_id', user.id);
-           
-           if (refetchedClean) {
-             setCleaningTasks(refetchedClean.map((t: any) => ({
-               id: t.id,
-               task: t.task,
-               frequency: t.frequency,
-               lastDone: t.last_done,
-               room: t.room
-             })));
-           }
-        }
-      } else {
+      if (cleanData) {
         setCleaningTasks(cleanData.map((t: any) => ({
           id: t.id,
           task: t.task,
@@ -281,37 +176,7 @@ const Casa = () => {
     }
   };
 
-  const seedData = async (userId: string) => {
-    try {
-      for (const cat of initialCategoriesSeed) {
-        const { data: newCat, error: catError } = await supabase
-          .from('home_shopping_categories')
-          .insert({
-            user_id: userId,
-            name: cat.name,
-            color: cat.color,
-            color_bg: cat.colorBg
-          })
-          .select()
-          .single();
-        
-        if (catError || !newCat) continue;
 
-        const itemsToInsert = cat.items.map(item => ({
-          user_id: userId,
-          category_id: newCat.id,
-          name: item.name,
-          checked: item.checked
-        }));
-
-        await supabase.from('home_shopping_items').insert(itemsToInsert);
-      }
-      // Reload data
-      initializeData();
-    } catch (error) {
-      console.error("Erro ao semear dados:", error);
-    }
-  };
 
   const toggleItem = async (categoryId: string, itemId: string) => {
     // Optimistic update
