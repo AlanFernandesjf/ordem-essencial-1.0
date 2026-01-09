@@ -90,7 +90,7 @@ export function MainLayout({ children, title }: MainLayoutProps) {
               </div>
             </div>
             {/* Alerta Visual Fixo se estiver perto de vencer */}
-            {daysRemaining !== null && daysRemaining <= 5 && daysRemaining > 0 && status !== 'past_due' && location.pathname !== '/assinatura' && (
+            {daysRemaining !== null && daysRemaining <= 3 && daysRemaining > 0 && status !== 'past_due' && location.pathname !== '/assinatura' && (
                 <Alert variant="destructive" className="mb-6">
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Atenção</AlertTitle>

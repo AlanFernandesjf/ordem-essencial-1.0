@@ -119,6 +119,7 @@ const Financas = () => {
   
   const [formSummaryLabel, setFormSummaryLabel] = useState("");
   const [formSummaryValue, setFormSummaryValue] = useState("");
+  const [formSummaryColor, setFormSummaryColor] = useState("");
   const [formBudgetValor, setFormBudgetValor] = useState("");
 
   // Transaction Form
@@ -724,6 +725,11 @@ const Financas = () => {
                     backgroundColor: card.color === "notion-yellow" ? "hsl(45 100% 80%)" :
                       card.color === "notion-red" ? "hsl(0 70% 75%)" :
                       card.color === "notion-blue" ? "hsl(210 80% 80%)" :
+                      card.color === "notion-purple" ? "hsl(270 60% 80%)" :
+                      card.color === "notion-green" ? "hsl(100 60% 75%)" :
+                      card.color === "notion-orange" ? "hsl(25 90% 75%)" :
+                      card.color === "notion-pink" ? "hsl(330 70% 80%)" :
+                      card.color === "notion-gray" ? "hsl(0 0% 80%)" :
                       "hsl(270 60% 80%)"
                   }}
                   onClick={() => openSummaryModal(card)}
@@ -1014,6 +1020,33 @@ const Financas = () => {
             type="date" 
             value={formTransDate} 
             onChange={e => setFormTransDate(e.target.value)} 
+            className="h-8"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Tipo</label>
+          <Select value={formTransType} onValueChange={setFormTransType}>
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="receita">Receita</SelectItem>
+              <SelectItem value="custo_fixo">Custo Fixo</SelectItem>
+              <SelectItem value="custo_variavel">Custo Variável</SelectItem>
+              <SelectItem value="divida">Dívida</SelectItem>
+              <SelectItem value="investimento">Investimento</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <FormField label="Categoria (Opcional)" value={formTransCategory} onChange={setFormTransCategory} placeholder="Ex: Alimentação" />
+      </CrudModal>
+    </MainLayout>
+  );
+};
+
+export default Financas;
             className="h-8"
           />
         </div>

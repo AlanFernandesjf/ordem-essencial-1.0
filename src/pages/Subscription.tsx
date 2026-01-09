@@ -49,7 +49,7 @@ export default function Subscription() {
   const [cpfValue, setCpfValue] = useState("");
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
-  const checkPaymentStatus = async () => {
+  const checkPaymentStatus = async (manual = false) => {
       try {
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) return;
@@ -61,10 +61,17 @@ export default function Subscription() {
               .single();
           
           if (sub?.status === 'active') {
+              // Tentar atualizar o profile também para garantir sincronia
+              await supabase.from('profiles').update({ subscription_status: 'pro' }).eq('id', user.id);
+              
+              toast({ title: "Pagamento Confirmado!", description: "Sua assinatura está ativa." });
               window.location.href = '/'; // Redireciona para Dashboard
+          } else if (manual) {
+              toast({ title: "Ainda processando", description: "O pagamento ainda não foi confirmado. Aguarde alguns instantes." });
           }
       } catch (error) {
           console.error("Erro ao verificar pagamento", error);
+          if (manual) toast({ variant: "destructive", title: "Erro", description: "Erro ao verificar status." });
       }
   };
 
@@ -72,7 +79,7 @@ export default function Subscription() {
   useEffect(() => {
       let interval: NodeJS.Timeout;
       if (showPaymentWait) {
-          interval = setInterval(checkPaymentStatus, 3000);
+          interval = setInterval(() => checkPaymentStatus(false), 3000);
       }
       return () => {
           if (interval) clearInterval(interval);
@@ -231,8 +238,8 @@ export default function Subscription() {
                     <Button variant="outline" onClick={() => setShowPaymentWait(false)} className="w-full">
                         Fechar e Aguardar
                     </Button>
-                    <Button onClick={checkPaymentStatus} className="w-full">
-                        Já paguei / Acessar Agora
+                    <Button onClick={() => checkPaymentStatus(true)} className="w-full">
+                        Verificar Status Agora
                     </Button>
                 </DialogFooter>
             </DialogContent>

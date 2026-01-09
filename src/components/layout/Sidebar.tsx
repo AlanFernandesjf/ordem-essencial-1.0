@@ -16,6 +16,7 @@ import {
   Crown,
   HelpCircle,
   BookOpen,
+  Smartphone,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ const navigation = [
 const bottomNavigation = [
   { name: "Suporte", href: "/suporte", icon: HelpCircle },
   { name: "Tutorial", href: "/tutorial", icon: BookOpen },
+  { name: "Aplicativos", href: "/apps", icon: Smartphone },
   { name: "Planos Premium", href: "/assinatura", icon: Crown },
   { name: "Configurações", href: "/configuracoes", icon: Settings },
 ];
@@ -47,6 +49,7 @@ export function Sidebar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string>("");
 
   useEffect(() => {
     checkUser();
@@ -89,9 +92,25 @@ export function Sidebar() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       setUserEmail(user.email || "");
-      const { data } = await supabase.from('profiles').select('role, avatar_url').eq('id', user.id).single();
+      
+      // Check subscription directly first
+      const { data: sub } = await supabase
+        .from('user_subscriptions')
+        .select('status')
+        .eq('user_id', user.id)
+        .single();
+
+      const { data } = await supabase.from('profiles').select('role, avatar_url, subscription_status').eq('id', user.id).single();
+      
       if (data?.role === 'admin') setIsAdmin(true);
       if (data?.avatar_url) setAvatarUrl(data.avatar_url);
+      
+      // Prioritize active subscription from user_subscriptions
+      if (sub?.status === 'active') {
+        setSubscriptionStatus('pro');
+      } else if (data?.subscription_status) {
+        setSubscriptionStatus(data.subscription_status);
+      }
     }
   };
 
@@ -223,7 +242,7 @@ export function Sidebar() {
                   {userEmail || "Usuário"}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {isAdmin ? "Administrador" : "Membro"}
+                  {isAdmin ? "Administrador" : subscriptionStatus === 'trial' ? "Teste Grátis" : subscriptionStatus === 'pro' ? "Membro PRO" : "Membro Gratuito"}
                 </p>
               </div>
             </div>

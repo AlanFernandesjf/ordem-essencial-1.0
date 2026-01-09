@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { formatDateDisplay } from "@/utils/dateUtils";
 
 interface Appointment {
   id: string;
@@ -490,7 +491,7 @@ const Saude = () => {
                 <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Calendar size={14} />
-                    {appointment.date}
+                    {formatDateDisplay(appointment.date)}
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock size={14} />
@@ -592,7 +593,7 @@ const Saude = () => {
       >
         <FormField label="Especialidade" value={formSpecialty} onChange={setFormSpecialty} placeholder="Dentista, Oftalmologista..." />
         <FormField label="Médico" value={formDoctor} onChange={setFormDoctor} placeholder="Dr. Nome" />
-        <FormField label="Data" value={formDate} onChange={setFormDate} placeholder="DD/MM/AAAA" />
+        <FormField label="Data" value={formDate} onChange={setFormDate} type="date" />
         <FormField label="Horário" value={formTime} onChange={setFormTime} placeholder="HH:MM" />
         <FormField label="Local" value={formLocation} onChange={setFormLocation} placeholder="Endereço da consulta" />
         <div className="grid grid-cols-4 items-center gap-4">

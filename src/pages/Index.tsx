@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Check, Plus, Calendar, Clock, Stethoscope } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
-import { getWeekDates, formatDateForDB } from "@/utils/dateUtils";
+import { getWeekDates, formatDateForDB, formatDateDisplay } from "@/utils/dateUtils";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -475,7 +475,7 @@ const Index = () => {
                       {(item.date || item.time) && (
                           <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
                               <Calendar size={10} />
-                              {item.date ? format(parseISO(item.date), "dd/MM", { locale: ptBR }) : ''}
+                              {item.date ? formatDateDisplay(item.date) : ''}
                               {item.time ? ` às ${item.time.slice(0, 5)}` : ''}
                           </span>
                       )}

@@ -23,8 +23,19 @@ interface ProvaEntrega {
   title: string;
   date: string;
   time: string;
-  color: "pink" | "blue" | "yellow";
+  color: string;
 }
+
+const notionColors: Record<string, { bg: string, border: string }> = {
+  red: { bg: "hsl(var(--notion-red-bg))", border: "hsl(var(--notion-red))" },
+  orange: { bg: "hsl(var(--notion-orange-bg))", border: "hsl(var(--notion-orange))" },
+  yellow: { bg: "hsl(var(--notion-yellow-bg))", border: "hsl(var(--notion-yellow))" },
+  green: { bg: "hsl(var(--notion-green-bg))", border: "hsl(var(--notion-green))" },
+  blue: { bg: "hsl(var(--notion-blue-bg))", border: "hsl(var(--notion-blue))" },
+  purple: { bg: "hsl(var(--notion-purple-bg))", border: "hsl(var(--notion-purple))" },
+  pink: { bg: "hsl(var(--notion-pink-bg))", border: "hsl(var(--notion-pink))" },
+  gray: { bg: "hsl(var(--notion-gray-bg))", border: "hsl(var(--notion-gray))" },
+};
 
 interface GradeItem {
   id: string;
@@ -71,7 +82,7 @@ const Estudos = () => {
   const [formProvaTitle, setFormProvaTitle] = useState("");
   const [formProvaDate, setFormProvaDate] = useState("");
   const [formProvaTime, setFormProvaTime] = useState("");
-  const [formProvaColor, setFormProvaColor] = useState<"pink" | "blue" | "yellow">("pink");
+  const [formProvaColor, setFormProvaColor] = useState("pink");
   const [formTarefaText, setFormTarefaText] = useState("");
   const [formTarefaDay, setFormTarefaDay] = useState("SEGUNDA");
   const [formGradeHorario, setFormGradeHorario] = useState("");
@@ -861,27 +872,26 @@ const Estudos = () => {
               {(provasEntregas || []).length === 0 ? (
                 <div className="text-center text-muted-foreground text-sm">Nenhum item cadastrado.</div>
               ) : (
-                (provasEntregas || []).map((item) => (
-                <div
-                  key={item.id}
-                  className={cn(
-                    "p-3 rounded-lg text-sm flex items-center justify-between group",
-                    item.color === "pink" && "bg-[hsl(var(--notion-pink-bg))] border-l-4 border-[hsl(var(--notion-pink))]",
-                    item.color === "blue" && "bg-[hsl(var(--notion-blue-bg))] border-l-4 border-[hsl(var(--notion-blue))]",
-                    item.color === "yellow" && "bg-[hsl(var(--notion-yellow-bg))] border-l-4 border-[hsl(var(--notion-yellow))]"
-                  )}
-                >
-                  <div className="font-medium text-foreground">{item.title} - {item.date} - {item.time}</div>
-                  <div className="flex gap-1">
-                    <button onClick={() => openProvaModal(item)} className="p-1 hover:bg-background/50 rounded text-foreground hover:text-primary transition-colors">
-                      <Pencil size={14} />
-                    </button>
-                    <button onClick={() => deleteProva(item.id)} className="p-1 hover:bg-destructive/10 rounded text-destructive/80 hover:text-destructive transition-colors">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              )))}
+                (provasEntregas || []).map((item) => {
+                  const colors = notionColors[item.color] || notionColors.pink;
+                  return (
+                    <div
+                      key={item.id}
+                      className="p-3 rounded-lg text-sm flex items-center justify-between group border-l-4"
+                      style={{ backgroundColor: colors.bg, borderColor: colors.border }}
+                    >
+                      <div className="font-medium text-foreground">{item.title} - {item.date} - {item.time}</div>
+                      <div className="flex gap-1">
+                        <button onClick={() => openProvaModal(item)} className="p-1 hover:bg-background/50 rounded text-foreground hover:text-primary transition-colors">
+                          <Pencil size={14} />
+                        </button>
+                        <button onClick={() => deleteProva(item.id)} className="p-1 hover:bg-destructive/10 rounded text-destructive/80 hover:text-destructive transition-colors">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })))}
             </div>
           </div>
 
@@ -958,18 +968,18 @@ const Estudos = () => {
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Cor</label>
-          <div className="flex gap-2">
-            {(['pink', 'blue', 'yellow'] as const).map((color) => (
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(notionColors).map(([name, colors]) => (
               <button
-                key={color}
-                onClick={() => setFormProvaColor(color)}
+                key={name}
+                type="button"
+                onClick={() => setFormProvaColor(name)}
                 className={cn(
                   "w-8 h-8 rounded-full border-2 transition-all",
-                  color === 'pink' && "bg-[hsl(var(--notion-pink))]",
-                  color === 'blue' && "bg-[hsl(var(--notion-blue))]",
-                  color === 'yellow' && "bg-[hsl(var(--notion-yellow))]",
-                  formProvaColor === color ? "border-foreground scale-110" : "border-transparent"
+                  formProvaColor === name ? "border-foreground scale-110" : "border-transparent hover:scale-105"
                 )}
+                style={{ backgroundColor: colors.bg }}
+                title={name}
               />
             ))}
           </div>

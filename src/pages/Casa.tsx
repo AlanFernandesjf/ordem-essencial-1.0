@@ -904,15 +904,37 @@ const Casa = () => {
               placeholder="Ex: Mercearia"
             />
           </FormField>
-          <FormField label="Cor (HSL)">
-            <div className="flex gap-2 items-center">
-              <input
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={formCategoryColor}
-                onChange={(e) => setFormCategoryColor(e.target.value)}
-                placeholder="hsl(140 50% 50%)"
-              />
-              <div className="w-8 h-8 rounded border" style={{ backgroundColor: formCategoryColor }}></div>
+          <FormField label="Cor">
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { name: "Verde", value: "hsl(142 76% 36%)", bg: "hsl(142 76% 36%)" },
+                  { name: "Azul", value: "hsl(217 91% 60%)", bg: "hsl(217 91% 60%)" },
+                  { name: "Roxo", value: "hsl(270 50% 40%)", bg: "hsl(270 50% 40%)" },
+                  { name: "Rosa", value: "hsl(322 75% 58%)", bg: "hsl(322 75% 58%)" },
+                  { name: "Laranja", value: "hsl(24 95% 53%)", bg: "hsl(24 95% 53%)" },
+                  { name: "Amarelo", value: "hsl(45 93% 47%)", bg: "hsl(45 93% 47%)" },
+                  { name: "Vermelho", value: "hsl(0 72% 51%)", bg: "hsl(0 72% 51%)" },
+                  { name: "Cinza", value: "hsl(215 16% 47%)", bg: "hsl(215 16% 47%)" },
+                ].map((color) => (
+                  <button
+                    key={color.name}
+                    type="button"
+                    onClick={() => setFormCategoryColor(color.value)}
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${
+                      formCategoryColor === color.value
+                        ? "border-emerald-600 scale-110"
+                        : "border-transparent hover:scale-105"
+                    }`}
+                    style={{ backgroundColor: color.bg }}
+                    title={color.name}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span>Selecionado:</span>
+                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: formCategoryColor }}></div>
+              </div>
             </div>
           </FormField>
         </CrudModal>

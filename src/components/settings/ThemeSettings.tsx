@@ -76,17 +76,13 @@ export function ThemeSettings() {
                       : "border-border hover:border-primary/50"
                   }`}
                 >
-                  <div className="flex gap-2 mb-2">
+                  <div className="flex gap-2 mb-2 justify-center">
                     <div 
-                      className="w-8 h-8 rounded-lg" 
+                      className="w-full h-8 rounded-lg" 
                       style={{ backgroundColor: `hsl(${ct.primary})` }}
                     />
-                    <div 
-                      className="w-8 h-8 rounded-lg" 
-                      style={{ backgroundColor: `hsl(${ct.accent})` }}
-                    />
                   </div>
-                  <p className="text-xs font-medium text-foreground text-left">
+                  <p className="text-xs font-medium text-foreground text-center">
                     {ct.name}
                   </p>
                   {isSelected && (

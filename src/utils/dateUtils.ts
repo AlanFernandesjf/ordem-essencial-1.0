@@ -19,3 +19,10 @@ export function formatDateForDB(date: Date) {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+export function formatDateDisplay(dateString: string) {
+  if (!dateString) return "";
+  const [year, month, day] = dateString.split('-');
+  if (!year || !month || !day) return dateString;
+  return `${day}/${month}/${year}`;
+}
