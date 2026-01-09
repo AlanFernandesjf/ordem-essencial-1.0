@@ -1,12 +1,13 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Check, Plus, Dumbbell, Pencil, Trash2, Upload, ImageIcon } from "lucide-react";
+import { Check, Plus, Dumbbell, Pencil, Trash2, Upload, ImageIcon, Sparkles } from "lucide-react";
 import { CrudModal, FormField } from "@/components/ui/crud-modal";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { BodyVisualizer } from "@/components/fitness/BodyVisualizer";
+import { AIPlanGenerator } from "@/components/ai/AIPlanGenerator";
 
 
 interface Exercise {
@@ -47,7 +48,7 @@ interface CareItem {
   category: "saude" | "beleza";
 }
 
-type TabType = "medidas" | "treinos" | "dieta" | "saude" | "beleza";
+type TabType = "medidas" | "treinos" | "dieta" | "saude" | "beleza" | "ai_coach";
 
 const DIET_DAYS = ["SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO", "DOMINGO", "DIÁRIO"];
 
@@ -55,6 +56,7 @@ const Treinos = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("treinos");
+  const [aiTab, setAiTab] = useState<'workout' | 'diet'>('workout');
   
   const [workouts, setWorkouts] = useState<WorkoutDay[]>([]);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
@@ -917,18 +919,55 @@ const Treinos = () => {
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={cn(
-              "px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-all",
+              "px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-all flex items-center gap-2",
               activeTab === tab.key
                 ? "bg-accent text-accent-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                : "bg-muted text-muted-foreground hover:bg-muted/80",
+               tab.key === 'ai_coach' && "bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-600 border border-indigo-200 hover:bg-indigo-50"
             )}
           >
+            {tab.icon && <tab.icon size={14} className={activeTab === tab.key ? "text-indigo-600" : ""} />}
             {tab.label}
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
+      {activeTab === "ai_coach" && (
+        <div className="space-y-6">
+          <div className="flex justify-center mb-8">
+            <div className="bg-muted p-1 rounded-lg inline-flex">
+              <button
+                onClick={() => setAiTab('workout')}
+                className={cn(
+                  "px-4 py-2 rounded-md text-sm font-medium transition-all",
+                  aiTab === 'workout' 
+                    ? "bg-background shadow-sm text-foreground" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Gerador de Treino
+              </button>
+              <button
+                onClick={() => setAiTab('diet')}
+                className={cn(
+                  "px-4 py-2 rounded-md text-sm font-medium transition-all",
+                  aiTab === 'diet' 
+                    ? "bg-background shadow-sm text-foreground" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Gerador de Dieta
+              </button>
+            </div>
+          </div>
+          
+          <div className="max-w-4xl mx-auto">
+             <AIPlanGenerator type={aiTab} />
+          </div>
+        </div>
+      )}
+
       {activeTab === "treinos" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {workouts.map((workout) => (
