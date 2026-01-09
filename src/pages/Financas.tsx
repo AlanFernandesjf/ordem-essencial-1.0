@@ -720,7 +720,7 @@ const Financas = () => {
               return (
                 <div
                   key={card.card_id}
-                  className="notion-card p-4 cursor-pointer hover:shadow-soft transition-shadow group"
+                  className="notion-card p-4 cursor-pointer hover:shadow-soft transition-shadow group text-slate-900"
                   style={{
                     backgroundColor: card.color === "notion-yellow" ? "hsl(45 100% 80%)" :
                       card.color === "notion-red" ? "hsl(0 70% 75%)" :
