@@ -20,6 +20,8 @@ import RedefinirSenha from "./pages/RedefinirSenha";
 import Suporte from "./pages/Suporte";
 import Tutorial from "./pages/Tutorial";
 import Apps from "./pages/Apps";
+import Comunidade from "./pages/Comunidade";
+import Mensagens from "./pages/Mensagens";
 import BuyCredits from "./pages/BuyCredits";
 import { AuthGuard } from "./components/layout/AuthGuard";
 import { AdminGuard } from "./components/layout/AdminGuard";
@@ -43,6 +45,8 @@ const App = () => (
           <Route path="/casa" element={<AuthGuard><Casa /></AuthGuard>} />
           <Route path="/viagens" element={<AuthGuard><Viagens /></AuthGuard>} />
           <Route path="/treinos" element={<AuthGuard><Treinos /></AuthGuard>} />
+          <Route path="/comunidade" element={<AuthGuard><Comunidade /></AuthGuard>} />
+          <Route path="/mensagens" element={<AuthGuard><Mensagens /></AuthGuard>} />
           <Route path="/configuracoes" element={<AuthGuard><Configuracoes /></AuthGuard>} />
           <Route path="/assinatura" element={<AuthGuard><Subscription /></AuthGuard>} />
           <Route path="/subscription" element={<Navigate to="/assinatura" replace />} />

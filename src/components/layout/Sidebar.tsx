@@ -18,11 +18,21 @@ import {
   BookOpen,
   Smartphone,
   Coins,
+  Users,
+  MessageCircle,
 } from "lucide-react";
+
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 
 const navigation = [
   { name: "Minha Semana", href: "/", icon: LayoutDashboard },
@@ -33,6 +43,8 @@ const navigation = [
   { name: "Casa & Compras", href: "/casa", icon: Home },
   { name: "Viagens", href: "/viagens", icon: Plane },
   { name: "Treinos", href: "/treinos", icon: Dumbbell },
+  { name: "Comunidade", href: "/comunidade", icon: Users },
+  { name: "Mensagens", href: "/mensagens", icon: MessageCircle },
 ];
 
 const bottomNavigation = [
@@ -45,14 +57,18 @@ const bottomNavigation = [
 ];
 
 export function Sidebar() {
+  const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [subscriptionStatus, setSubscriptionStatus] = useState<string>("");
   const [planType, setPlanType] = useState<string>("");
+  const [status, setStatus] = useState<string>("online");
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     checkUser();
@@ -105,6 +121,7 @@ export function Sidebar() {
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      setUserId(user.id);
       setUserEmail(user.email || "");
       
       // Check subscription directly first
@@ -114,10 +131,12 @@ export function Sidebar() {
         .eq('user_id', user.id)
         .single();
 
-      const { data } = await supabase.from('profiles').select('role, avatar_url, subscription_status').eq('id', user.id).single();
+      const { data } = await supabase.from('profiles').select('role, avatar_url, subscription_status, username, status').eq('id', user.id).single();
       
       if (data?.role === 'admin') setIsAdmin(true);
       if (data?.avatar_url) setAvatarUrl(data.avatar_url);
+      if (data?.username) setUsername(data.username);
+      if (data?.status) setStatus(data.status);
       
       // Check validity
       const now = new Date();
@@ -144,6 +163,48 @@ export function Sidebar() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/login");
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!userId) return;
+    
+    // Optimistic update
+    setStatus(newStatus);
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status: newStatus })
+        .eq('id', userId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Status atualizado",
+        description: `Seu status agora é ${
+          newStatus === 'online' ? 'Online' : 
+          newStatus === 'away' ? 'Ausente' : 
+          newStatus === 'busy' ? 'Ocupado' : 'Invisível'
+        }`,
+      });
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível atualizar seu status."
+      });
+    }
+  };
+
+  const getStatusColor = (s: string) => {
+    switch (s) {
+        case 'online': return 'border-green-500';
+        case 'away': return 'border-yellow-500';
+        case 'busy': return 'border-red-500';
+        case 'invisible': return 'border-transparent opacity-50';
+        default: return 'border-transparent';
+    }
   };
 
   return (
@@ -258,15 +319,38 @@ export function Sidebar() {
           {/* User profile */}
           <div className="p-4 border-t border-sidebar-border">
             <div className="flex items-center gap-3 px-2">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={avatarUrl || undefined} alt={userEmail} />
-                <AvatarFallback className="bg-primary/20 text-primary">
-                  {userEmail.substring(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className={`h-9 w-9 cursor-pointer transition-all border-2 ${getStatusColor(status)}`}>
+                    <AvatarImage src={avatarUrl || undefined} alt={userEmail} />
+                    <AvatarFallback className="bg-primary/20 text-primary">
+                      {userEmail.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem onClick={() => handleStatusChange('online')}>
+                    <div className="w-2 h-2 rounded-full bg-green-500 mr-2" />
+                    Online
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleStatusChange('away')}>
+                    <div className="w-2 h-2 rounded-full bg-yellow-500 mr-2" />
+                    Ausente
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleStatusChange('busy')}>
+                    <div className="w-2 h-2 rounded-full bg-red-500 mr-2" />
+                    Ocupado
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleStatusChange('invisible')}>
+                    <div className="w-2 h-2 rounded-full bg-gray-300 mr-2" />
+                    Invisível
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate" title={userEmail}>
-                  {userEmail || "Usuário"}
+                <p className="text-sm font-medium text-foreground truncate" title={username || userEmail}>
+                  {username ? `@${username}` : (userEmail || "Usuário")}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
                   {isAdmin ? "Administrador" : 

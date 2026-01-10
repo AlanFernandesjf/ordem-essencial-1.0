@@ -1,33 +1,14 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { GamificationSection } from "@/components/dashboard/GamificationSection";
+import { SocialFeed } from "@/components/dashboard/SocialFeed";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Check, Plus, Calendar, Clock, Stethoscope } from "lucide-react";
+import { Check, Calendar, Clock, Stethoscope, User, MessageCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
-import { getWeekDates, formatDateForDB, formatDateDisplay } from "@/utils/dateUtils";
+import { formatDateForDB, formatDateDisplay } from "@/utils/dateUtils";
 import { useToast } from "@/hooks/use-toast";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
-
-const weekDays = ["SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO", "DOMINGO"];
-
-interface Habit {
-  id: string;
-  title: string;
-}
-
-interface ScheduleItem {
-  id: string;
-  horario: string;
-  seg: string;
-  ter: string;
-  qua: string;
-  qui: string;
-  sex: string;
-  sab?: string;
-  dom?: string;
-}
 
 interface UrgenciaItem {
   id: string;
@@ -42,18 +23,20 @@ interface UrgenciaItem {
 const Index = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [habits, setHabits] = useState<Habit[]>([]);
-  const [completedLogs, setCompletedLogs] = useState<Set<string>>(new Set()); // Format: "habitId-date"
   const [urgenciasList, setUrgenciasList] = useState<UrgenciaItem[]>([]);
-  const [scheduleData, setScheduleData] = useState<ScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState("Usuário");
+  const [userUsername, setUserUsername] = useState("");
+  const [userAvatar, setUserAvatar] = useState("");
   const [userStatus, setUserStatus] = useState<"trial" | "pro" | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
   const [time, setTime] = useState(new Date());
+  const [socialStats, setSocialStats] = useState({
+      posts: 0,
+      followers: 0,
+      following: 0
+  });
   
-  const weekDates = getWeekDates();
-
   const today = new Date();
   const formattedDate = today.toLocaleDateString("pt-BR", {
     weekday: "long",
@@ -86,8 +69,12 @@ const Index = () => {
       if (!user) return;
 
       // 0. Fetch Profile & Subscription
-      const { data: profile } = await supabase.from('profiles').select('name').eq('id', user.id).single();
-      if (profile?.name) setUserName(profile.name.split(' ')[0]);
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      if (profile) {
+          setUserName(profile.name.split(' ')[0]);
+          setUserUsername(profile.username || "");
+          setUserAvatar(profile.avatar_url || "");
+      }
 
       const { data: sub } = await supabase.from('user_subscriptions').select('status').eq('user_id', user.id).single();
       if (sub) {
@@ -95,54 +82,28 @@ const Index = () => {
         else if (sub.status === 'active') setUserStatus('pro');
       }
 
-      // 1. Fetch habits
-      const { data: existingHabits } = await supabase
-        .from('habits')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at');
+      // Fetch Social Stats
+      const { count: postsCount } = await supabase
+        .from('community_posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
 
-      setHabits(existingHabits || []);
+      const { count: followersCount } = await supabase
+        .from('community_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', user.id);
 
-      // 2. Fetch logs for this week
-      const startDate = formatDateForDB(weekDates[0]);
-      const endDate = formatDateForDB(weekDates[6]);
+      const { count: followingCount } = await supabase
+        .from('community_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_id', user.id);
 
-      const { data: logs } = await supabase
-        .from('habit_logs')
-        .select('habit_id, completed_date')
-        .eq('user_id', user.id)
-        .gte('completed_date', startDate)
-        .lte('completed_date', endDate);
+      setSocialStats({
+          posts: postsCount || 0,
+          followers: followersCount || 0,
+          following: followingCount || 0
+      });
 
-      if (logs) {
-        const logsSet = new Set<string>();
-        logs.forEach(log => {
-          logsSet.add(`${log.habit_id}-${log.completed_date}`);
-        });
-        setCompletedLogs(logsSet);
-      }
-
-      // 3. Fetch Schedule
-      const { data: schedule } = await supabase
-        .from('study_schedule')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('horario'); // Order by time string might be imperfect but okay for now
-
-      if (schedule) {
-        setScheduleData(schedule.map((s: any) => ({
-          id: s.id,
-          horario: s.horario,
-          seg: s.seg || "—",
-          ter: s.ter || "—",
-          qua: s.qua || "—",
-          qui: s.qui || "—",
-          sex: s.sex || "—",
-          sab: "—", // Schema doesn't have sat/sun explicitly in study_schedule but we can add or ignore
-          dom: "—"
-        })));
-      }
 
       // 4. Fetch Urgencias (Home Chores & Appointments)
       const { data: chores } = await supabase
@@ -199,7 +160,6 @@ const Index = () => {
       if (creditsData) {
         setCredits(creditsData.credits_remaining);
       } else {
-        // Lazy initialization if no record exists
         const { error: insertError } = await supabase
             .from('user_credits')
             .insert({ user_id: user.id, credits_remaining: 20 });
@@ -207,8 +167,8 @@ const Index = () => {
         if (!insertError) {
             setCredits(20);
         } else {
-            console.warn("Could not initialize credits (likely missing RLS policy or network error):", insertError);
-            setCredits(0); // Fallback to 0 so the badge appears
+            console.warn("Could not initialize credits:", insertError);
+            setCredits(0);
         }
       }
 
@@ -224,59 +184,6 @@ const Index = () => {
     }
   };
 
-  const toggleHabit = async (habitId: string, date: Date) => {
-    const dateStr = formatDateForDB(date);
-    const key = `${habitId}-${dateStr}`;
-    const isCompleted = completedLogs.has(key);
-    
-    // Optimistic update
-    const newLogs = new Set(completedLogs);
-    if (isCompleted) {
-      newLogs.delete(key);
-    } else {
-      newLogs.add(key);
-    }
-    setCompletedLogs(newLogs);
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      if (isCompleted) {
-        // Remove
-        await supabase
-          .from('habit_logs')
-          .delete()
-          .match({ habit_id: habitId, completed_date: dateStr, user_id: user.id });
-          
-        // Decrease XP (optional logic)
-      } else {
-        // Add
-        await supabase
-          .from('habit_logs')
-          .insert({ habit_id: habitId, completed_date: dateStr, user_id: user.id });
-          
-        // Manual XP update
-        const { data: profile } = await supabase.from('profiles').select('current_xp').eq('id', user.id).single();
-        if (profile) {
-          await supabase.from('profiles').update({ current_xp: profile.current_xp + 10 }).eq('id', user.id);
-        }
-      }
-      
-      // Notify gamification section
-      window.dispatchEvent(new Event('gamification-updated'));
-      
-    } catch (error) {
-      console.error("Error toggling habit:", error);
-      // Revert on error
-      setCompletedLogs(completedLogs); 
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar hábito",
-        description: "Tente novamente."
-      });
-    }
-  };
 
   const toggleUrgencia = async (id: string) => {
     const item = urgenciasList.find(u => u.id === id);
@@ -348,7 +255,7 @@ const Index = () => {
                 <Calendar size={14} />
                 <span className="capitalize">{formattedDate}</span>
                 </div>
-                <h1 className="text-2xl font-bold text-foreground">Minha Semana ✅</h1>
+                <h1 className="text-2xl font-bold text-foreground">Social Dashboard</h1>
             </div>
 
             {/* Clock */}
@@ -366,134 +273,109 @@ const Index = () => {
       </div>
 
       <GamificationSection />
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Social Profile & Feed */}
+        <div className="lg:col-span-2 space-y-6">
+           {/* Social Profile Summary */}
+           <div className="notion-card p-6 flex flex-col sm:flex-row items-center sm:items-start gap-6">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-muted">
+                   {userAvatar ? (
+                     <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
+                   ) : (
+                     <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
+                        <User size={40} />
+                     </div>
+                   )}
+                </div>
+              </div>
+              
+              <div className="flex-1 text-center sm:text-left space-y-4">
+                 <div>
+                    <h2 className="text-2xl font-bold">{userName}</h2>
+                    <p className="text-muted-foreground">{userUsername ? `@${userUsername}` : "Sem nome de usuário"}</p>
+                 </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Left Column - Habits Table & Weekly Schedule */}
-        <div className="xl:col-span-2 space-y-6">
-          {/* Daily Habits Table */}
-          <div className="notion-card">
-            <div className="notion-card-header notion-header-yellow">
-              <Check className="w-4 h-4" />
-              HÁBITOS DIÁRIOS
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-notion-yellow-bg">
-                    <th className="text-left p-3 text-sm font-semibold border-b border-border">DIA</th>
-                    {habits.length > 0 ? habits.map((habit) => (
-                      <th key={habit.id} className="p-3 text-center text-xs font-semibold border-b border-border min-w-[80px]">
-                        {habit.title}
-                      </th>
-                    )) : (
-                      <th className="p-3 text-center text-xs text-muted-foreground border-b border-border">
-                        Nenhum hábito cadastrado
-                      </th>
-                    )}
-                    <th className="p-2 border-b border-border">
-                      <button className="p-1 hover:bg-muted rounded">
-                        <Plus size={14} />
-                      </button>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {weekDays.map((dayName, dayIndex) => {
-                    const date = weekDates[dayIndex];
-                    const isToday = formatDateForDB(date) === formatDateForDB(today);
-                    
-                    return (
-                      <tr key={dayName} className={cn(
-                        "hover:bg-muted/50 transition-colors",
-                        isToday && "bg-blue-50/50 dark:bg-blue-900/10"
-                      )}>
-                        <td className="p-3 border-b border-border text-sm font-medium">
-                          <div className="flex flex-col">
-                            <span>{dayName}</span>
-                            <span className="text-[10px] text-muted-foreground font-normal">
-                              {date.getDate()}/{date.getMonth() + 1}
-                            </span>
-                          </div>
-                        </td>
-                        {habits.map((habit) => {
-                           const isCompleted = completedLogs.has(`${habit.id}-${formatDateForDB(date)}`);
-                           return (
-                            <td key={habit.id} className="p-3 text-center border-b border-border">
-                              <button
-                                onClick={() => toggleHabit(habit.id, date)}
-                                className={cn(
-                                  "w-6 h-6 rounded border flex items-center justify-center transition-all duration-200",
-                                  isCompleted
-                                    ? "bg-primary border-primary text-primary-foreground"
-                                    : "border-input hover:bg-muted"
-                                )}
-                              >
-                                {isCompleted && <Check size={14} />}
-                              </button>
-                            </td>
-                          );
-                        })}
-                        <td className="p-2 border-b border-border"></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                 <div className="flex justify-center sm:justify-start gap-6 text-sm">
+                    <div className="text-center">
+                       <span className="block font-bold text-lg">{socialStats.posts}</span>
+                       <span className="text-muted-foreground">Publicações</span>
+                    </div>
+                    <div className="text-center">
+                       <span className="block font-bold text-lg">{socialStats.followers}</span>
+                       <span className="text-muted-foreground">Seguidores</span>
+                    </div>
+                    <div className="text-center">
+                       <span className="block font-bold text-lg">{socialStats.following}</span>
+                       <span className="text-muted-foreground">Seguindo</span>
+                    </div>
+                 </div>
+              </div>
 
-          {/* Weekly Schedule */}
-          <div className="notion-card">
-            <div className="notion-card-header notion-header-pink flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              ROTINA SEMANAL
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-notion-pink-bg">
-                    <th className="p-2 text-xs font-semibold border-b border-border">Horário</th>
-                    <th className="p-2 text-xs font-semibold border-b border-border">Segunda</th>
-                    <th className="p-2 text-xs font-semibold border-b border-border">Terça</th>
-                    <th className="p-2 text-xs font-semibold border-b border-border">Quarta</th>
-                    <th className="p-2 text-xs font-semibold border-b border-border">Quinta</th>
-                    <th className="p-2 text-xs font-semibold border-b border-border">Sexta</th>
-                    <th className="p-2 text-xs font-semibold border-b border-border">Sábado</th>
-                    <th className="p-2 text-xs font-semibold border-b border-border">Domingo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scheduleData.map((row) => (
-                    <tr key={row.id} className="hover:bg-muted/30">
-                      <td className="p-2 text-xs font-medium border-b border-border/50 bg-notion-pink-bg/50">
-                        {row.horario}
-                      </td>
-                      <td className="p-2 text-xs border-b border-border/50 text-center">{row.seg}</td>
-                      <td className="p-2 text-xs border-b border-border/50 text-center">{row.ter}</td>
-                      <td className="p-2 text-xs border-b border-border/50 text-center">{row.qua}</td>
-                      <td className="p-2 text-xs border-b border-border/50 text-center">{row.qui}</td>
-                      <td className="p-2 text-xs border-b border-border/50 text-center">{row.sex}</td>
-                      <td className="p-2 text-xs border-b border-border/50 text-center">{row.sab}</td>
-                      <td className="p-2 text-xs border-b border-border/50 text-center">{row.dom}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+              <div className="flex flex-col gap-2 min-w-[140px]">
+                 <Link to="/comunidade">
+                    <button className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors shadow-sm text-sm">
+                       Ver Feed
+                    </button>
+                 </Link>
+                 <Link to="/configuracoes">
+                    <button className="w-full py-2 px-4 bg-secondary text-secondary-foreground rounded-lg font-medium hover:bg-secondary/80 transition-colors text-sm">
+                       Editar Perfil
+                    </button>
+                 </Link>
+              </div>
+           </div>
+
+           {/* Create Post Input (Shortcut) */}
+           <div className="notion-card p-4 flex gap-4 items-center cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => navigate('/comunidade')}>
+              <div className="w-10 h-10 rounded-full overflow-hidden bg-muted">
+                 {userAvatar ? (
+                    <img src={userAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                 ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
+                        <User size={20} />
+                    </div>
+                 )}
+              </div>
+              <div className="flex-1 bg-muted/50 rounded-full px-4 py-2.5 text-muted-foreground text-sm">
+                 No que você está pensando?
+              </div>
+              <button className="p-2 text-primary hover:bg-primary/10 rounded-full">
+                 <span className="sr-only">Postar</span>
+                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-image"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              </button>
+           </div>
+
+           <SocialFeed />
         </div>
 
-        {/* Right Column */}
+        {/* Right Column - Messages & Urgencies */}
         <div className="space-y-6">
+           {/* Messages / Notifications */}
+           <div className="notion-card hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/mensagens')}>
+              <div className="notion-card-header notion-header-blue flex justify-between items-center">
+                 <span className="flex items-center gap-2">
+                    <MessageCircle className="w-4 h-4" />
+                    MENSAGENS
+                 </span>
+                 {/* <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">0 Novas</span> */}
+              </div>
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                 <p className="mb-2">Acesse suas conversas privadas.</p>
+                 <Button variant="outline" size="sm" className="w-full">
+                    Abrir Mensagens
+                 </Button>
+              </div>
+           </div>
 
-
-          {/* Urgencies */}
-          <div className="notion-card">
+           {/* Urgencies */}
+           <div className="notion-card">
             <div className="notion-card-header notion-header-pink">
               🚨 URGÊNCIAS
             </div>
             <div className="p-4 space-y-3">
-              {urgenciasList.map((item) => (
+              {urgenciasList.length > 0 ? urgenciasList.map((item) => (
                 <label
                   key={item.id}
                   className="flex items-start gap-3 cursor-pointer group"
@@ -527,15 +409,16 @@ const Index = () => {
                       )}
                   </div>
                 </label>
-              ))}
-              <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mt-2">
-                <Plus size={14} />
-                Adicionar
-              </button>
+              )) : (
+                  <div className="text-center text-xs text-muted-foreground py-2">
+                      Nenhuma urgência pendente.
+                  </div>
+              )}
+              <div className="flex gap-2 justify-center mt-2">
+                <Link to="/tarefas" className="text-xs text-primary hover:underline">Ver Tarefas</Link>
+              </div>
             </div>
           </div>
-
-
 
           {/* Quick Links */}
           <div className="grid grid-cols-2 gap-3">

@@ -22,9 +22,11 @@ interface UserProfile {
   id: string;
   email: string;
   name: string;
+  username?: string;
   avatar_url: string | null;
   cpf?: string;
   birth_date?: string;
+  status?: string;
 }
 
 interface UserSettings {
@@ -221,7 +223,10 @@ const Configuracoes = () => {
         id: user.id,
         email: user.email || "",
         name: profileData?.name || "",
-        avatar_url: profileData?.avatar_url || null
+        username: profileData?.username || "",
+        avatar_url: profileData?.avatar_url || null,
+        cpf: profileData?.cpf,
+        birth_date: profileData?.birth_date
       });
 
       // Fetch Settings
@@ -337,6 +342,8 @@ const Configuracoes = () => {
         .from('profiles')
         .update({
           name: profile.name,
+          username: profile.username || null, // Handle empty string as null or keep it empty if allowed
+          birth_date: profile.birth_date, // Ensure other fields are saved if changed
         })
         .eq('id', profile.id);
 
@@ -346,13 +353,21 @@ const Configuracoes = () => {
         title: "Sucesso",
         description: "Perfil atualizado com sucesso."
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao salvar perfil:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível salvar o perfil."
-      });
+      if (error?.code === '23505') {
+        toast({
+            variant: "destructive",
+            title: "Nome de usuário indisponível",
+            description: "Este nome de usuário já está em uso. Por favor, escolha outro."
+        });
+      } else {
+        toast({
+            variant: "destructive",
+            title: "Erro",
+            description: "Não foi possível salvar o perfil."
+        });
+      }
     } finally {
       setSaving(false);
     }
@@ -517,16 +532,34 @@ const Configuracoes = () => {
                   />
                 </label>
               </div>
-              <div className="flex-1">
-                <Label htmlFor="name">Nome</Label>
+              <div className="flex-1 space-y-3">
+                <div>
+                  <Label htmlFor="name">Nome</Label>
+                  <Input 
+                    id="name" 
+                    value={profile?.name || ""} 
+                    onChange={(e) => setProfile(prev => prev ? { ...prev, name: e.target.value } : null)}
+                    placeholder="Seu nome"
+                    className="mt-1"
+                  />
+                </div>
+
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="username">Nome de Usuário (Único)</Label>
+              <div className="flex items-center mt-1">
+                <span className="bg-muted px-3 py-2 border border-r-0 rounded-l-md text-muted-foreground text-sm">@</span>
                 <Input 
-                  id="name" 
-                  value={profile?.name || ""} 
-                  onChange={(e) => setProfile(prev => prev ? { ...prev, name: e.target.value } : null)}
-                  placeholder="Seu nome"
-                  className="mt-1"
+                  id="username" 
+                  value={profile?.username || ""} 
+                  onChange={(e) => setProfile(prev => prev ? { ...prev, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') } : null)}
+                  placeholder="usuario_unico"
+                  className="rounded-l-none"
                 />
               </div>
+              <p className="text-xs text-muted-foreground mt-1">Use apenas letras minúsculas, números e underline.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
