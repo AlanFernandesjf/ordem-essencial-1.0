@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check, X, AlertCircle, Info, Eye, EyeOff } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -18,9 +18,45 @@ export default function Login() {
   
   // Extra register fields
   const [name, setName] = useState("");
+  const [username, setUsername] = useState(""); // Added username state
   const [cpf, setCpf] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState("female");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  
+  // Password visibility toggles
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Password strength
+  const [passwordStrength, setPasswordStrength] = useState({
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    special: false
+  });
+
+  const checkPasswordStrength = (pass: string) => {
+    setPasswordStrength({
+      length: pass.length >= 8,
+      uppercase: /[A-Z]/.test(pass),
+      lowercase: /[a-z]/.test(pass),
+      number: /[0-9]/.test(pass),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(pass)
+    });
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPass = e.target.value;
+    setPassword(newPass);
+    checkPasswordStrength(newPass);
+  };
+
+  const isPasswordStrong = () => {
+    return Object.values(passwordStrength).every(Boolean);
+  };
 
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -124,6 +160,14 @@ export default function Login() {
     setLoading(true);
 
     try {
+      if (!isPasswordStrong()) {
+        throw new Error("A senha não atende aos requisitos de segurança.");
+      }
+
+      if (password !== confirmPassword) {
+        throw new Error("As senhas não coincidem.");
+      }
+
       // Verificar CPF antes
       const { data: cpfExists, error: cpfCheckError } = await supabase
         .rpc('check_cpf_exists', { cpf_check: cpf });
@@ -142,6 +186,7 @@ export default function Login() {
         options: {
           data: {
             full_name: name,
+            username: username, // Added username
             cpf: cpf,
             birth_date: formattedDate,
             gender: gender
@@ -153,8 +198,9 @@ export default function Login() {
 
       toast({
         title: "Conta criada com sucesso!",
-        description: "Verifique seu email para confirmar o cadastro.",
+        description: "Sua conta foi criada. Faça login para continuar.",
       });
+      setActiveTab("login");
     } catch (error: any) {
       let description = error.message;
       if (error.message.includes("User already registered") || error.message.includes("already registered")) {
@@ -244,13 +290,28 @@ export default function Login() {
                       Esqueceu a senha?
                     </Button>
                   </div>
-                  <Input 
-                    id="password-login" 
-                    type="password" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required 
-                  />
+                  <div className="relative">
+                    <Input 
+                      id="password-login" 
+                      type={showLoginPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required 
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                    >
+                      {showLoginPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -293,6 +354,18 @@ export default function Login() {
                     placeholder="Seu Nome" 
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    required 
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="username-register">Nome de Usuário</Label>
+                  <Input 
+                    id="username-register" 
+                    type="text" 
+                    placeholder="usuario123" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     required 
                   />
                 </div>
@@ -350,15 +423,83 @@ export default function Login() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password-register">Senha</Label>
-                  <Input 
-                    id="password-register" 
-                    type="password" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required 
-                    minLength={6}
-                  />
+                  <div className="relative">
+                    <Input 
+                      id="password-register" 
+                      type={showRegisterPassword ? "text" : "password"}
+                      value={password}
+                      onChange={handlePasswordChange}
+                      required 
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                    >
+                      {showRegisterPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {/* Password Strength Indicators */}
+                  <div className="space-y-2 mt-2 p-3 bg-muted/50 rounded-md text-xs">
+                    <p className="font-medium mb-1">Requisitos da senha:</p>
+                    <div className="grid grid-cols-1 gap-1">
+                      <div className="flex items-center gap-2">
+                        {passwordStrength.length ? <Check className="w-3 h-3 text-green-500" /> : <X className="w-3 h-3 text-red-500" />}
+                        <span className={passwordStrength.length ? "text-green-600" : "text-muted-foreground"}>Mínimo 8 caracteres</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {passwordStrength.uppercase ? <Check className="w-3 h-3 text-green-500" /> : <X className="w-3 h-3 text-muted-foreground" />}
+                        <span className={passwordStrength.uppercase ? "text-green-600" : "text-muted-foreground"}>Letra maiúscula</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {passwordStrength.lowercase ? <Check className="w-3 h-3 text-green-500" /> : <X className="w-3 h-3 text-muted-foreground" />}
+                        <span className={passwordStrength.lowercase ? "text-green-600" : "text-muted-foreground"}>Letra minúscula</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {passwordStrength.number ? <Check className="w-3 h-3 text-green-500" /> : <X className="w-3 h-3 text-muted-foreground" />}
+                        <span className={passwordStrength.number ? "text-green-600" : "text-muted-foreground"}>Número</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {passwordStrength.special ? <Check className="w-3 h-3 text-green-500" /> : <X className="w-3 h-3 text-muted-foreground" />}
+                        <span className={passwordStrength.special ? "text-green-600" : "text-muted-foreground"}>Caractere especial (!@#$%^&*)</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password-register">Confirmar Senha</Label>
+                  <div className="relative">
+                    <Input 
+                      id="confirm-password-register" 
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required 
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Criar Conta
