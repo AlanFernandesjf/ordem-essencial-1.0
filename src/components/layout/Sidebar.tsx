@@ -43,8 +43,6 @@ const navigation = [
   { name: "Casa & Compras", href: "/casa", icon: Home },
   { name: "Viagens", href: "/viagens", icon: Plane },
   { name: "Treinos", href: "/treinos", icon: Dumbbell },
-  { name: "Comunidade", href: "/comunidade", icon: Users },
-  { name: "Mensagens", href: "/mensagens", icon: MessageCircle },
 ];
 
 const bottomNavigation = [

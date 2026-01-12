@@ -1,11 +1,10 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { GamificationSection } from "@/components/dashboard/GamificationSection";
-import { SocialFeed } from "@/components/dashboard/SocialFeed";
+import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Check, Calendar, Clock, Stethoscope, User, MessageCircle } from "lucide-react";
+import { Check, Calendar, Clock, Stethoscope } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { formatDateForDB, formatDateDisplay } from "@/utils/dateUtils";
 import { useToast } from "@/hooks/use-toast";
@@ -31,11 +30,6 @@ const Index = () => {
   const [userStatus, setUserStatus] = useState<"trial" | "pro" | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
   const [time, setTime] = useState(new Date());
-  const [socialStats, setSocialStats] = useState({
-      posts: 0,
-      followers: 0,
-      following: 0
-  });
   
   const today = new Date();
   const formattedDate = today.toLocaleDateString("pt-BR", {
@@ -81,29 +75,6 @@ const Index = () => {
         if (sub.status === 'trial') setUserStatus('trial');
         else if (sub.status === 'active') setUserStatus('pro');
       }
-
-      // Fetch Social Stats
-      const { count: postsCount } = await supabase
-        .from('community_posts')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-
-      const { count: followersCount } = await supabase
-        .from('community_follows')
-        .select('*', { count: 'exact', head: true })
-        .eq('following_id', user.id);
-
-      const { count: followingCount } = await supabase
-        .from('community_follows')
-        .select('*', { count: 'exact', head: true })
-        .eq('follower_id', user.id);
-
-      setSocialStats({
-          posts: postsCount || 0,
-          followers: followersCount || 0,
-          following: followingCount || 0
-      });
-
 
       // 4. Fetch Urgencias (Home Chores & Appointments)
       const { data: chores } = await supabase
@@ -275,100 +246,13 @@ const Index = () => {
       <GamificationSection />
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Social Profile & Feed */}
+        {/* Left Column - Dashboard Overview */}
         <div className="lg:col-span-2 space-y-6">
-           {/* Social Profile Summary */}
-           <div className="notion-card p-6 flex flex-col sm:flex-row items-center sm:items-start gap-6">
-              <div className="relative">
-                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-muted">
-                   {userAvatar ? (
-                     <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
-                   ) : (
-                     <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
-                        <User size={40} />
-                     </div>
-                   )}
-                </div>
-              </div>
-              
-              <div className="flex-1 text-center sm:text-left space-y-4">
-                 <div>
-                    <h2 className="text-2xl font-bold">{userName}</h2>
-                    <p className="text-muted-foreground">{userUsername ? `@${userUsername}` : "Sem nome de usuário"}</p>
-                 </div>
-
-                 <div className="flex justify-center sm:justify-start gap-6 text-sm">
-                    <div className="text-center">
-                       <span className="block font-bold text-lg">{socialStats.posts}</span>
-                       <span className="text-muted-foreground">Publicações</span>
-                    </div>
-                    <div className="text-center">
-                       <span className="block font-bold text-lg">{socialStats.followers}</span>
-                       <span className="text-muted-foreground">Seguidores</span>
-                    </div>
-                    <div className="text-center">
-                       <span className="block font-bold text-lg">{socialStats.following}</span>
-                       <span className="text-muted-foreground">Seguindo</span>
-                    </div>
-                 </div>
-              </div>
-
-              <div className="flex flex-col gap-2 min-w-[140px]">
-                 <Link to="/comunidade">
-                    <button className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors shadow-sm text-sm">
-                       Ver Feed
-                    </button>
-                 </Link>
-                 <Link to="/configuracoes">
-                    <button className="w-full py-2 px-4 bg-secondary text-secondary-foreground rounded-lg font-medium hover:bg-secondary/80 transition-colors text-sm">
-                       Editar Perfil
-                    </button>
-                 </Link>
-              </div>
-           </div>
-
-           {/* Create Post Input (Shortcut) */}
-           <div className="notion-card p-4 flex gap-4 items-center cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => navigate('/comunidade')}>
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-muted">
-                 {userAvatar ? (
-                    <img src={userAvatar} alt="Avatar" className="w-full h-full object-cover" />
-                 ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
-                        <User size={20} />
-                    </div>
-                 )}
-              </div>
-              <div className="flex-1 bg-muted/50 rounded-full px-4 py-2.5 text-muted-foreground text-sm">
-                 No que você está pensando?
-              </div>
-              <button className="p-2 text-primary hover:bg-primary/10 rounded-full">
-                 <span className="sr-only">Postar</span>
-                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-image"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-              </button>
-           </div>
-
-           <SocialFeed />
+           <DashboardOverview />
         </div>
 
-        {/* Right Column - Messages & Urgencies */}
+        {/* Right Column - Urgencies */}
         <div className="space-y-6">
-           {/* Messages / Notifications */}
-           <div className="notion-card hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/mensagens')}>
-              <div className="notion-card-header notion-header-blue flex justify-between items-center">
-                 <span className="flex items-center gap-2">
-                    <MessageCircle className="w-4 h-4" />
-                    MENSAGENS
-                 </span>
-                 {/* <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">0 Novas</span> */}
-              </div>
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                 <p className="mb-2">Acesse suas conversas privadas.</p>
-                 <Button variant="outline" size="sm" className="w-full">
-                    Abrir Mensagens
-                 </Button>
-              </div>
-           </div>
-
            {/* Urgencies */}
            <div className="notion-card">
             <div className="notion-card-header notion-header-pink">
