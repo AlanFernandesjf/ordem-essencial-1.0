@@ -370,18 +370,41 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-      if (!confirm("Tem certeza? Isso apagará todos os dados do usuário.")) return;
-      
-      // Chamar RPC ou deletar direto (auth.users requer service role, aqui deletamos profile e trigger cuida do resto se configurado, ou usamos RPC)
-      // Como não temos RPC de delete user exposta, vamos tentar deletar profile
-      try {
-        const { error } = await supabase.from('profiles').delete().eq('id', userId);
-        if (error) throw error;
-        toast({ title: "Usuário removido" });
-        fetchUsers();
-      } catch (error: any) {
-         toast({ variant: "destructive", title: "Erro ao deletar", description: "Pode ser necessário deletar via Auth no painel Supabase se houver restrições." });
+    if (!confirm("Tem certeza? Isso apagará todos os dados do usuário.")) return;
+    
+    try {
+      // Tenta deletar via RPC (que remove do auth.users e cascateia)
+      const { error } = await supabase.rpc('delete_user_by_admin', {
+        user_id_to_delete: userId
+      });
+
+      if (error) {
+        // Se a RPC não existir ou falhar, tenta fallback (apenas profile) mas avisa
+        console.warn("Erro ao deletar via RPC, tentando deletar profile:", error);
+        if (error.message.includes("function") && error.message.includes("does not exist")) {
+             // Fallback para deletar apenas o profile (comportamento antigo)
+             const { error: profileError } = await supabase.from('profiles').delete().eq('id', userId);
+             if (profileError) throw profileError;
+             toast({ 
+                title: "Perfil removido (Parcial)", 
+                description: "O perfil foi removido, mas o login pode persistir. Execute o script 'delete_user_rpc.sql' no Supabase." 
+             });
+        } else {
+            throw error;
+        }
+      } else {
+        toast({ title: "Usuário removido com sucesso" });
       }
+
+      fetchUsers();
+    } catch (error: any) {
+       console.error("Erro ao deletar usuário:", error);
+       toast({ 
+         variant: "destructive", 
+         title: "Erro ao deletar", 
+         description: error.message || "Erro desconhecido." 
+       });
+    }
   };
 
   const openAddCreditsModal = (user: UserProfile) => {

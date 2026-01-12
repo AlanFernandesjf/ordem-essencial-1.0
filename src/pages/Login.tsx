@@ -180,10 +180,11 @@ export default function Login() {
 
       const formattedDate = formatDateForDb(birthDate);
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: window.location.origin,
           data: {
             full_name: name,
             username: username, // Added username
@@ -196,11 +197,21 @@ export default function Login() {
 
       if (error) throw error;
 
-      toast({
-        title: "Conta criada com sucesso!",
-        description: "Sua conta foi criada. Faça login para continuar.",
-      });
-      setActiveTab("login");
+      if (data.session) {
+        // Se retornar sessão, o email já foi confirmado (ou confirmação está desligada)
+        toast({
+          title: "Conta criada com sucesso!",
+          description: "Login realizado automaticamente.",
+        });
+        navigate("/");
+      } else {
+        // Se não retornar sessão, precisa confirmar email
+        toast({
+          title: "Conta criada com sucesso!",
+          description: "Verifique seu email para confirmar o cadastro.",
+        });
+        setActiveTab("login");
+      }
     } catch (error: any) {
       let description = error.message;
       if (error.message.includes("User already registered") || error.message.includes("already registered")) {

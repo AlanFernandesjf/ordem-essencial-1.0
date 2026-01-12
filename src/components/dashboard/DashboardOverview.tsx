@@ -269,21 +269,30 @@ export function DashboardOverview() {
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="h-[120px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={financeData}>
-                  <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} />
-                  <Tooltip 
-                    formatter={(value) => [`R$ ${value}`, 'Valor']}
-                    cursor={{ fill: 'transparent' }}
-                  />
-                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                    {financeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.name === 'Receitas' ? '#22c55e' : '#ef4444'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="h-[120px] w-full flex items-center justify-center">
+              {financeData.reduce((acc, curr) => acc + curr.value, 0) > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={financeData}>
+                    <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} />
+                    <Tooltip 
+                      formatter={(value) => [`R$ ${value}`, 'Valor']}
+                      cursor={{ fill: 'transparent' }}
+                    />
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                      {financeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.name === 'Receitas' ? '#22c55e' : '#ef4444'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center text-xs text-muted-foreground">
+                  <p>Sem dados financeiros este mês.</p>
+                  <Button variant="link" className="h-auto p-0 text-xs mt-1" onClick={() => navigate('/financas')}>
+                    Adicionar transação
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
